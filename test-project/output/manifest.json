@@ -1,0 +1,40 @@
+{
+  "project": "test-project",
+  "exported": "2025-07-11T04:16:31.117Z",
+  "files": [
+    {
+      "name": "README.md",
+      "type": "text",
+      "role": "about",
+      "size": "5.8 KB"
+    },
+    {
+      "name": "package.json",
+      "type": "file",
+      "role": "content",
+      "size": "1.7 KB"
+    },
+    {
+      "name": "package.json",
+      "type": "file",
+      "role": "content",
+      "size": "1.7 KB"
+    },
+    {
+      "name": "README.md",
+      "type": "text",
+      "role": "about",
+      "size": "5.8 KB"
+    },
+    {
+      "name": "cli.js",
+      "type": "file",
+      "role": "content",
+      "size": "3 KB"
+    }
+  ],
+  "theme": "default",
+  "format": "7z",
+  "packageSize": 4956,
+  "packagePath": "/Users/cameronbrooks/Server/SUBMITIT/test-project/output/default_test-project_5files.7z"
+}

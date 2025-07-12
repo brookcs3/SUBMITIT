@@ -1,0 +1,10 @@
+{
+  "name": "My Portfolio",
+  "version": "1.0.0",
+  "theme": "neon",
+  "layout": {
+    "width": 80,
+    "responsive": true
+  },
+  "files": []
+}

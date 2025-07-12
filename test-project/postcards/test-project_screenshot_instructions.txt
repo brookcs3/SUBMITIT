@@ -1,0 +1,18 @@
+
+# Post Card Image Generation
+
+To generate a PNG image of your post card:
+
+1. Open the HTML file in your browser:
+   file:///Users/cameronbrooks/Server/SUBMITIT/test-project/postcards/test-project_postcard_2025-07-11T04-13-47-783Z.html
+
+2. Use browser screenshot tools or:
+   - macOS: Cmd+Shift+4 (select area)
+   - Windows: Windows+Shift+S
+   - Linux: Screenshot tool
+
+3. Or use automated screenshot tools:
+   - Puppeteer: const screenshot = await page.screenshot()
+   - Playwright: await page.screenshot({ path: 'postcard.png' })
+
+Post card dimensions: 800x500px

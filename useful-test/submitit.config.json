@@ -1,0 +1,27 @@
+{
+  "name": "useful-test",
+  "theme": "default",
+  "created": "2025-07-12T13:55:39.159Z",
+  "files": [
+    {
+      "name": "hero.md",
+      "type": "markdown",
+      "role": "hero"
+    },
+    {
+      "name": "bio.md",
+      "type": "markdown",
+      "role": "bio"
+    },
+    {
+      "name": "projects.md",
+      "type": "markdown",
+      "role": "projects"
+    },
+    {
+      "name": "test-doc.md",
+      "type": "markdown",
+      "role": "content"
+    }
+  ]
+}

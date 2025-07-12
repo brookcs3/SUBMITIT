@@ -1,0 +1,27 @@
+{
+  "name": "workflow-test",
+  "theme": "neon",
+  "created": "2025-07-12T14:07:07.857Z",
+  "files": [
+    {
+      "name": "hero.md",
+      "type": "markdown",
+      "role": "hero"
+    },
+    {
+      "name": "bio.md",
+      "type": "markdown",
+      "role": "bio"
+    },
+    {
+      "name": "projects.md",
+      "type": "markdown",
+      "role": "projects"
+    },
+    {
+      "name": "resume.md",
+      "type": "markdown",
+      "role": "bio"
+    }
+  ]
+}

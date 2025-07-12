@@ -1,0 +1,74 @@
+{
+  "name": "submitit",
+  "version": "1.0.0",
+  "description": "A CLI tool that transforms deliverable packaging into a polished, intentional ritual",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "submitit": "./working-cli.js",
+    "submitit-demo": "./simple-cli.js"
+  },
+  "scripts": {
+    "dev": "node working-cli.js",
+    "demo": "node working-cli.js demo",
+    "build": "node working-cli.js build", 
+    "preview": "node working-cli.js preview",
+    "test": "node test-real-functionality.js",
+    "lint": "echo 'Linting skipped - focus on functionality'",
+    "format": "echo 'Formatting skipped - focus on functionality'"
+  },
+  "keywords": [
+    "cli",
+    "packaging",
+    "deliverables",
+    "submission",
+    "portfolio",
+    "astro",
+    "ink",
+    "yoga",
+    "terminal"
+  ],
+  "author": "Cameron Brooks",
+  "license": "MIT",
+  "dependencies": {
+    "@astrojs/node": "^9.3.0",
+    "@astrojs/tailwind": "^6.0.2",
+    "@inkjs/ui": "^2.0.0",
+    "archiver": "^7.0.1",
+    "astro": "^5.11.0",
+    "chalk": "^5.4.1",
+    "chalk-animation": "^2.0.3",
+    "commander": "^12.1.0",
+    "execa": "^9.0.0",
+    "fs-extra": "^11.2.0",
+    "globby": "^14.0.2",
+    "ink": "^6.0.1",
+    "ink-spinner": "^5.0.0",
+    "lru-cache": "^11.0.0",
+    "mime-types": "^2.1.35",
+    "ora": "^8.0.1",
+    "p-retry": "^6.2.0",
+    "react": "^19.1.0",
+    "tailwindcss": "^3.4.0",
+    "wait-port": "^1.0.4",
+    "yaml": "^2.4.5",
+    "yoga-layout": "^3.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cameronbrooks/submitit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cameronbrooks/submitit/issues"
+  },
+  "homepage": "https://github.com/cameronbrooks/submitit#readme"
+}

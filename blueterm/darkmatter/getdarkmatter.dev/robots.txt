@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /eula
+Disallow: /privacy-policy
+Allow: /
+Sitemap: https://getdarkmatter.dev/sitemap-index.xml

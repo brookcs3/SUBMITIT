@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astro OS - Retro Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        
+        body {
+            font-family: 'VT323', monospace;
+            background-color: #000033;
+            color: #00ff00;
+            image-rendering: pixelated;
+        }
+        
+        .window {
+            border: 3px solid #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+            background-color: rgba(0, 20, 20, 0.8);
+            position: relative;
+            resize: both;
+            overflow: hidden;
+            min-width: 300px;
+            min-height: 200px;
+        }
+
+        .window-controls {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            z-index: 10;
+        }
+
+        .window-control {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            margin-left: 5px;
+            cursor: pointer;
+            text-align: center;
+            line-height: 16px;
+            background-color: rgba(0, 50, 0, 0.7);
+            border: 1px solid #00ff00;
+        }
+
+        .window-control:hover {
+            background-color: rgba(0, 100, 0, 0.7);
+        }
+        
+        .title-bar {
+            background: linear-gradient(to right, #003300, #006600);
+            border-bottom: 2px solid #00ff00;
+        }
+        
+        .button {
+            width: 12px;
+            height: 12px;
+            border: 2px solid #00ff00;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .close { background-color: #ff3300; }
+        .minimize { background-color: #ffcc00; }
+        .maximize { background-color: #00cc00; }
+        
+        .file-icon {
+            text-align: center;
+            width: 80px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        
+        .file-icon:hover {
+            background-color: rgba(0, 255, 0, 0.2);
+        }
+        
+        .file-icon-img {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto;
+            background-color: #004400;
+            border: 2px solid #00aa00;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .terminal {
+            background-color: #001100;
+            border: 2px solid #00aa00;
+            font-family: 'VT323', monospace;
+            color: #00ff00;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+        }
+        
+        .prompt {
+            color: #00ff00;
+        }
+        
+        .cursor {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                rgba(0, 0, 0, 0.1) 50%, 
+                rgba(0, 0, 0, 0.2) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .glow {
+            text-shadow: 0 0 5px #00ff00;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <!-- CRT Scanlines Effect -->
+    <div class="scanlines"></div>
+    
+    <!-- Main Container -->
+    <div class="container mx-auto relative" style="min-height: 100vh;">
+        <!-- Header -->
+        <div class="window mb-4">
+            <div class="title-bar p-2 flex justify-between items-center">
+                <div class="flex items-center">
+                    <span class="ml-2 text-xl glow">ASTRO OS v2.52</span>
+                </div>
+                <div class="text-xl">
+                    <span class="mr-2">USER:</span>
+                    <span class="glow">GUEST</span>
+                </div>
+                <div class="window-controls">
+                    <span class="window-control" onclick="this.closest('.window').style.display='none'">×</span>
+                    <span class="window-control">-</span>
+                    <span class="window-control">□</span>
+                </div>
+            </div>
+            <div class="p-4">
+                <div class="flex flex-wrap">
+                    <div class="file-icon">
+                        <div class="file-icon-img">
+                            <i class="fas fa-folder text-2xl text-yellow-300"></i>
+                        </div>
+                        <div class="mt-1">System</div>
+                    </div>
+                    <div class="file-icon">
+                        <div class="file-icon-img">
+                            <i class="fas fa-file text-2xl text-blue-300"></i>
+                        </div>
+                        <div class="mt-1">Readme</div>
+                    </div>
+                    <div class="file-icon">
+                        <div class="file-icon-img">
+                            <i class="fas fa-gamepad text-2xl text-purple-300"></i>
+                        </div>
+                        <div class="mt-1">Games</div>
+                    </div>
+                    <div class="file-icon">
+                        <div class="file-icon-img">
+                            <i class="fas fa-terminal text-2xl text-green-300"></i>
+                        </div>
+                        <div class="mt-1">Terminal</div>
+                    </div>
+                    <div class="file-icon">
+                        <div class="file-icon-img">
+                            <i class="fas fa-image text-2xl text-pink-300"></i>
+                        </div>
+                        <div class="mt-1">Gallery</div>
+                    </div>
+                    <div class="file-icon">
+                        <div class="file-icon-img">
+                            <i class="fas fa-music text-2xl text-red-300"></i>
+                        </div>
+                        <div class="mt-1">Audio</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- File Explorer Section -->
+        <div class="flex flex-col gap-4 mb-4">
+            <!-- File Explorer Window -->
+            <div class="window flex-1">
+                <div class="title-bar p-2 flex justify-between">
+                    <div class="flex items-center">
+                        <span class="ml-2">File Explorer</span>
+                    </div>
+                    <div class="window-controls">
+                        <span class="window-control" onclick="this.closest('.window').style.display='none'">×</span>
+                        <span class="window-control">-</span>
+                        <span class="window-control">□</span>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div class="flex flex-wrap" id="file-explorer">
+                        <!-- Files will be populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Catch-all Folder Area -->
+            <div class="window">
+                <div class="title-bar p-2">
+                    <div class="flex items-center">
+                        <span class="button close"></span>
+                        <span class="ml-2">Catch-All Folder</span>
+                    </div>
+                </div>
+                <div 
+                    class="p-4 min-h-32 cursor-crosshair relative" 
+                    id="catch-all-area"
+                    style="background-color: rgba(0, 20, 20, 0.5);"
+                >
+                    <div class="absolute inset-0 flex items-center justify-center text-gray-500 pointer-events-none" id="catch-all-placeholder">
+                        Click and drag to create a folder area
+                    </div>
+                    <div class="flex flex-wrap" id="catch-all-files"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="window mt-4">
+            <div class="title-bar p-2">
+                <div class="flex items-center">
+                    <span class="button close"></span>
+                    <span class="ml-2">Status Bar</span>
+                </div>
+            </div>
+            <div class="p-2 flex justify-between">
+                <div>
+                    <span class="mr-4">CPU: <span class="glow">45%</span></span>
+                    <span class="mr-4">MEM: <span class="glow">68%</span></span>
+                    <span>DISK: <span class="glow">87%</span></span>
+                </div>
+                <div>
+                    <span id="clock" class="glow">00:00:00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Window management
+        document.addEventListener('DOMContentLoaded', () => {
+            // Make windows draggable
+            document.querySelectorAll('.window').forEach(windowEl => {
+                const titleBar = windowEl.querySelector('.title-bar');
+                
+                titleBar.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('window-control')) return;
+                    
+                    const startX = e.clientX;
+                    const startY = e.clientY;
+                    const startLeft = windowEl.offsetLeft;
+                    const startTop = windowEl.offsetTop;
+                    
+                    function moveWindow(e) {
+                        windowEl.style.left = `${startLeft + e.clientX - startX}px`;
+                        windowEl.style.top = `${startTop + e.clientY - startY}px`;
+                    }
+                    
+                    function stopMoving() {
+                        document.removeEventListener('mousemove', moveWindow);
+                        document.removeEventListener('mouseup', stopMoving);
+                    }
+                    
+                    document.addEventListener('mousemove', moveWindow);
+                    document.addEventListener('mouseup', stopMoving);
+                });
+            });
+        });
+
+        // Update clock
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            document.getElementById('clock').textContent = timeStr;
+        }
+        
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // File explorer functionality
+        const fileExplorer = document.getElementById('file-explorer');
+        const catchAllArea = document.getElementById('catch-all-area');
+        const catchAllFiles = document.getElementById('catch-all-files');
+        const placeholder = document.getElementById('catch-all-placeholder');
+
+        // Sample files
+        const files = [
+            { name: 'Document.txt', icon: 'fa-file-alt', color: 'text-blue-300' },
+            { name: 'Image.jpg', icon: 'fa-image', color: 'text-green-300' },
+            { name: 'Music.mp3', icon: 'fa-music', color: 'text-purple-300' },
+            { name: 'Archive.zip', icon: 'fa-file-archive', color: 'text-yellow-300' },
+            { name: 'Code.js', icon: 'fa-file-code', color: 'text-red-300' },
+            { name: 'Video.mp4', icon: 'fa-film', color: 'text-pink-300' }
+        ];
+
+        // Populate file explorer
+        files.forEach(file => {
+            const fileEl = document.createElement('div');
+            fileEl.className = 'file-icon draggable';
+            fileEl.draggable = true;
+            fileEl.innerHTML = `
+                <div class="file-icon-img">
+                    <i class="fas ${file.icon} text-2xl ${file.color}"></i>
+                </div>
+                <div class="mt-1">${file.name}</div>
+            `;
+            fileExplorer.appendChild(fileEl);
+        });
+
+        // Drag and drop functionality
+        let isCreatingFolder = false;
+        let startX, startY;
+        let currentWidth = 0, currentHeight = 0;
+
+        catchAllArea.addEventListener('mousedown', (e) => {
+            if (e.target === catchAllArea || e.target === placeholder) {
+                isCreatingFolder = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                placeholder.style.display = 'none';
+                catchAllArea.style.outline = '2px dashed #00ff00';
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isCreatingFolder) return;
+            
+            currentWidth = e.clientX - startX;
+            currentHeight = e.clientY - startY;
+            
+            catchAllArea.style.width = `${Math.max(200, currentWidth)}px`;
+            catchAllArea.style.height = `${Math.max(100, currentHeight)}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isCreatingFolder) {
+                isCreatingFolder = false;
+                catchAllArea.style.outline = 'none';
+                if (currentWidth < 200 && currentHeight < 100) {
+                    // Reset if too small
+                    catchAllArea.style.width = '';
+                    catchAllArea.style.height = '';
+                    placeholder.style.display = 'flex';
+                }
+            }
+        });
+
+        // Make files draggable
+        document.querySelectorAll('.draggable').forEach(file => {
+            file.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', file.innerHTML);
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+        });
+
+        catchAllArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            catchAllArea.style.backgroundColor = 'rgba(0, 50, 50, 0.7)';
+        });
+
+        catchAllArea.addEventListener('dragleave', () => {
+            catchAllArea.style.backgroundColor = 'rgba(0, 20, 20, 0.5)';
+        });
+
+        catchAllArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            catchAllArea.style.backgroundColor = 'rgba(0, 20, 20, 0.5)';
+            
+            const data = e.dataTransfer.getData('text/plain');
+            if (data) {
+                const fileEl = document.createElement('div');
+                fileEl.className = 'file-icon';
+                fileEl.innerHTML = data;
+                catchAllFiles.appendChild(fileEl);
+                placeholder.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

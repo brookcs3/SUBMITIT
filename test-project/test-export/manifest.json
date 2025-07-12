@@ -1,0 +1,40 @@
+{
+  "project": "test-project",
+  "exported": "2025-07-11T04:06:11.971Z",
+  "files": [
+    {
+      "name": "README.md",
+      "type": "text",
+      "role": "about",
+      "size": "5.8 KB"
+    },
+    {
+      "name": "package.json",
+      "type": "file",
+      "role": "content",
+      "size": "1.7 KB"
+    },
+    {
+      "name": "package.json",
+      "type": "file",
+      "role": "content",
+      "size": "1.7 KB"
+    },
+    {
+      "name": "README.md",
+      "type": "text",
+      "role": "about",
+      "size": "5.8 KB"
+    },
+    {
+      "name": "cli.js",
+      "type": "file",
+      "role": "content",
+      "size": "3 KB"
+    }
+  ],
+  "theme": "default",
+  "format": "zip",
+  "packageSize": 64079,
+  "packagePath": "test-export/test-project_2025-07-11T04-06-11-951Z.zip"
+}

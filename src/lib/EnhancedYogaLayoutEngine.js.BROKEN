@@ -1,0 +1,3382 @@
+/**
+ * Enhanced Yoga Layout Engine - Advanced Layout System
+ * 
+ * This advanced layout engine brings magazine-quality design intelligence to submitit,
+ * creating layouts that feel intentionally crafted rather than algorithmically generated.
+ * Uses Meta's Yoga layout engine for flexbox calculations.
+ */
+
+import yoga from 'yoga-layout';
+import { createHash } from 'crypto';
+import { LRUCache } from 'lru-cache';
+import { EventEmitter } from 'events';
+import { YogaConfigOptimizer } from './YogaConfigOptimizer.js';
+import { YogaMemoryOptimizer } from './YogaMemoryOptimizer.js';
+import { AdvancedTerminalDetector } from './AdvancedTerminalDetector.js';
+import { LayoutMemoization } from './LayoutMemoization.js';
+import chalk from 'chalk';
+
+export class EnhancedYogaLayoutEngine extends EventEmitter {
+  constructor(options = {}) {
+    super();
+    this.options = {
+      enableSmartOptimization: true,
+      enableContentAnalysis: true,
+      enableResponsiveBreakpoints: true,
+      enableConfigOptimization: true,
+      enablePerformanceMonitoring: true,
+      enableExperimentalFeatures: false,
+      enableMemoryOptimization: true,
+      enableMemoryProfiling: true,
+      enableLeakDetection: true,
+      enableTerminalDetection: true,
+      enableAdaptiveScaling: true,
+      enableRealtimeResize: true,
+      enableLayoutMemoization: true,
+      enableMemoizationProfiling: true,
+      ...options
+    };
+    
+    // Advanced smart caching system with content-aware invalidation
+    this.cache = new LRUCache({ 
+      max: 2000, 
+      ttl: 1000 * 60 * 45, // 45 minute cache
+      updateAgeOnGet: true,
+      allowStale: true
+    });
+    
+    // Cache performance tracking
+    this.cacheStats = {
+      hits: 0,
+      misses: 0,
+      invalidations: 0,
+      warmingOperations: 0,
+      smartInvalidations: 0,
+      totalCacheTime: 0,
+      totalComputeTime: 0
+    };
+    
+    // Content fingerprinting for smart invalidation
+    this.contentFingerprints = new Map();
+    this.cacheMetadata = new Map();
+    this.breakpoints = {
+      narrow: { width: 80, height: 24 },    // Small terminal windows
+      standard: { width: 120, height: 30 }, // Standard terminal
+      wide: { width: 160, height: 40 },     // Wide terminal
+      ultrawide: { width: 200, height: 50 } // Ultra-wide displays
+    };
+    
+    // Advanced Yoga configuration optimization
+    this.configOptimizer = new YogaConfigOptimizer({
+      enablePerformanceMonitoring: this.options.enablePerformanceMonitoring,
+      enableExperimentalFeatures: this.options.enableExperimentalFeatures,
+      enableConfigCaching: true
+    });
+    
+    // Advanced memory optimization with node pooling
+    this.memoryOptimizer = this.options.enableMemoryOptimization ? new YogaMemoryOptimizer({
+      initialPoolSize: 100,
+      maxPoolSize: 1000,
+      enableLeakDetection: this.options.enableLeakDetection,
+      enableMemoryProfiling: this.options.enableMemoryProfiling,
+      enableGCOptimization: true,
+      gcInterval: 45000, // 45 seconds
+      memoryReportInterval: 120000 // 2 minutes
+    }) : null;
+    
+    // Advanced terminal detection and adaptive scaling
+    this.terminalDetector = this.options.enableTerminalDetection ? new AdvancedTerminalDetector({
+      enableRealtimeDetection: this.options.enableRealtimeResize,
+      enableCapabilityDetection: true,
+      enablePerformanceOptimization: this.options.enablePerformanceMonitoring,
+      detectionInterval: 2000, // 2 seconds
+      debounceDelay: 300 // 300ms debounce
+    }) : null;
+    
+    // Advanced layout memoization system
+    this.memoization = this.options.enableLayoutMemoization ? new LayoutMemoization({
+      maxMemoizedComponents: 500,
+      defaultTTL: 3 * 60 * 1000, // 3 minutes
+      enableDependencyTracking: true,
+      enablePerformanceMonitoring: this.options.enableMemoizationProfiling,
+      enableDebugLogging: this.options.enableDebugLogging || false,
+      shallowComparisonDepth: 2
+    }) : null;
+    
+    // Active configuration management
+    this.activeConfig = null;
+    this.configHistory = [];
+    this.performanceBaseline = null;
+    
+    // Terminal state and adaptive scaling
+    this.currentTerminalState = null;
+    this.adaptiveScaling = null;
+    this.layoutBreakpoint = 'md';
+    
+    // TODO: Initialize grid system and layout strategies when they're implemented
+    this.gridSystem = null;
+    this.layoutStrategies = null;
+    
+    // System integration
+    this.isInitialized = false;
+    this.logger = options.logger || console;
+    this.activeOperations = new Map();
+    this.operationId = 0;
+    
+    // Set up configuration optimization event handlers
+    this.setupConfigOptimizationHandlers();
+    
+    // Set up memory optimization event handlers
+    if (this.memoryOptimizer) {
+      this.setupMemoryOptimizationHandlers();
+    }
+    
+    // Set up terminal detection event handlers
+    if (this.terminalDetector) {
+      this.setupTerminalDetectionHandlers();
+    }
+    
+    // Set up memoization event handlers
+    if (this.memoization) {
+      this.setupMemoizationHandlers();
+    }
+  }
+
+  // === INITIALIZATION ===
+
+  async initializeEngine(options = {}) {
+    if (this.isInitialized) return;
+    
+    console.log(chalk.blue('🧘 Initializing Enhanced Yoga Layout Engine...'));
+    this.logger.debug('Initializing Enhanced Yoga Layout Engine');
+    
+    try {
+      // Initialize configuration optimizer
+      if (this.options.enableConfigOptimization) {
+        console.log(chalk.cyan('🎛️  Initializing Yoga configuration optimization...'));
+        await this.initializeConfigOptimization();
+      }
+      
+      // Initialize memory optimization
+      if (this.options.enableMemoryOptimization && this.memoryOptimizer) {
+        console.log(chalk.magenta('🧠 Initializing Yoga memory optimization...'));
+        await this.initializeMemoryOptimization();
+      }
+      
+      // Initialize terminal detection and adaptive scaling
+      if (this.options.enableTerminalDetection && this.terminalDetector) {
+        console.log(chalk.blue('🖥️  Initializing advanced terminal detection...'));
+        await this.initializeTerminalDetection();
+      }
+      
+      // Initialize layout memoization
+      if (this.options.enableLayoutMemoization && this.memoization) {
+        console.log(chalk.magenta('🧠 Initializing layout memoization system...'));
+        await this.initializeMemoization();
+      }
+      
+      // Establish performance baseline
+      if (this.options.enablePerformanceMonitoring) {
+        await this.establishPerformanceBaseline();
+      }
+      
+      // TODO: Initialize grid system and layout strategies when implemented
+      // For now, use advanced configuration mode
+      this.logger.debug('Yoga layout engine initialized with advanced configuration, memory optimization, terminal detection, and memoization');
+      
+      this.isInitialized = true;
+      console.log(chalk.green('✅ Enhanced Yoga Layout Engine initialized successfully'));
+      this.logger.info('Enhanced Yoga Layout Engine initialized successfully');
+      this.emit('engine-ready', { 
+        configOptimization: this.options.enableConfigOptimization,
+        performanceMonitoring: this.options.enablePerformanceMonitoring,
+        memoryOptimization: this.options.enableMemoryOptimization,
+        terminalDetection: this.options.enableTerminalDetection,
+        adaptiveScaling: this.options.enableAdaptiveScaling,
+        layoutMemoization: this.options.enableLayoutMemoization
+      });
+      
+    } catch (error) {
+      console.error(chalk.red('❌ Failed to initialize layout engine:'), error.message);
+      this.logger.error('Failed to initialize layout engine:', error);
+      throw error;
+    }
+  }
+
+  // === CONFIGURATION OPTIMIZATION ===
+
+  /**
+   * Initialize advanced configuration optimization
+   */
+  async initializeConfigOptimization() {
+    try {
+      // Set up optimized configurations for different use cases
+      const terminalConfig = this.configOptimizer.createOptimizedConfig('submitit-terminal', {
+        terminalOptimized: true,
+        performanceFocused: true
+      });
+      
+      const webPreviewConfig = this.configOptimizer.createOptimizedConfig('submitit-web-preview', {
+        highPrecision: true,
+        performanceFocused: true
+      });
+      
+      const memoryEfficientConfig = this.configOptimizer.createOptimizedConfig('submitit-memory-efficient', {
+        memoryEfficient: true,
+        performanceFocused: true
+      });
+      
+      // Set default configuration
+      this.activeConfig = terminalConfig;
+      
+      console.log(chalk.green('🎯 Configuration optimization initialized'));
+      this.emit('config-optimization-ready');
+      
+    } catch (error) {
+      console.warn(chalk.yellow('⚠️  Configuration optimization initialization failed:'), error.message);
+      // Continue without optimization
+    }
+  }
+
+  /**
+   * Establish performance baseline for optimization decisions
+   */
+  async establishPerformanceBaseline() {
+    console.log(chalk.blue('📊 Establishing performance baseline...'));
+    
+    const testCases = this.generateBaselineTestCases();
+    
+    try {
+      const baselineResults = await this.configOptimizer.analyzeConfigPerformance(
+        'submitit-terminal',
+        testCases
+      );
+      
+      this.performanceBaseline = {
+        ...baselineResults,
+        establishedAt: Date.now(),
+        testCaseCount: testCases.length
+      };
+      
+      console.log(chalk.green(`✅ Baseline established: ${baselineResults.averageLayoutTime.toFixed(2)}ms avg`));
+      this.emit('baseline-established', this.performanceBaseline);
+      
+    } catch (error) {
+      console.warn(chalk.yellow('⚠️  Could not establish performance baseline:'), error.message);
+    }
+  }
+
+  /**
+   * Generate test cases for performance baseline
+   */
+  generateBaselineTestCases() {
+    return [
+      {
+        name: 'simple-layout',
+        width: 120,
+        height: 30,
+        flexDirection: yoga.FLEX_DIRECTION_COLUMN
+      },
+      {
+        name: 'complex-grid',
+        width: 160,
+        height: 40,
+        flexDirection: yoga.FLEX_DIRECTION_ROW
+      },
+      {
+        name: 'nested-containers',
+        width: 200,
+        height: 50,
+        flexDirection: yoga.FLEX_DIRECTION_COLUMN
+      }
+    ];
+  }
+
+  /**
+   * Switch to optimized configuration based on context
+   */
+  async switchToOptimizedConfig(context) {
+    if (!this.options.enableConfigOptimization) {
+      return this.activeConfig;
+    }
+    
+    let configName;
+    
+    switch (context) {
+      case 'terminal':
+        configName = 'submitit-terminal';
+        break;
+      case 'web-preview':
+        configName = 'submitit-web-preview';
+        break;
+      case 'memory-constrained':
+        configName = 'submitit-memory-efficient';
+        break;
+      default:
+        configName = 'submitit-terminal';
+    }
+    
+    try {
+      const newConfig = this.configOptimizer.getOptimizedConfig(configName);
+      
+      // Track configuration change
+      this.configHistory.push({
+        previousConfig: this.activeConfig,
+        newConfig,
+        context,
+        switchedAt: Date.now()
+      });
+      
+      this.activeConfig = newConfig;
+      
+      console.log(chalk.cyan(`🔧 Switched to optimized config: ${configName} for ${context}`));
+      this.emit('config-switched', { configName, context });
+      
+      return newConfig;
+      
+    } catch (error) {
+      console.warn(chalk.yellow(`⚠️  Could not switch to config ${configName}:`, error.message));
+      return this.activeConfig;
+    }
+  }
+
+  /**
+   * Analyze current layout performance and suggest optimizations
+   */
+  async analyzeLayoutPerformance(layoutContext) {
+    if (!this.options.enablePerformanceMonitoring || !this.performanceBaseline) {
+      return null;
+    }
+    
+    console.log(chalk.blue('🔍 Analyzing layout performance...'));
+    
+    try {
+      const testCases = this.generateContextualTestCases(layoutContext);
+      const currentResults = await this.configOptimizer.analyzeConfigPerformance(
+        'submitit-terminal', // Current active config
+        testCases
+      );
+      
+      const analysis = {
+        currentPerformance: currentResults,
+        baselineComparison: this.compareToBaseline(currentResults),
+        optimizationSuggestions: this.generateOptimizationSuggestions(currentResults),
+        contextualRecommendations: this.getContextualRecommendations(layoutContext)
+      };
+      
+      this.emit('performance-analyzed', analysis);
+      return analysis;
+      
+    } catch (error) {
+      console.warn(chalk.yellow('⚠️  Performance analysis failed:'), error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Compare current performance to baseline
+   */
+  compareToBaseline(currentResults) {
+    if (!this.performanceBaseline) return null;
+    
+    const speedImprovement = this.performanceBaseline.averageLayoutTime / currentResults.averageLayoutTime;
+    const memoryComparison = currentResults.memoryUsage / this.performanceBaseline.memoryUsage;
+    
+    return {
+      speedRatio: speedImprovement,
+      speedImprovement: speedImprovement > 1,
+      memoryRatio: memoryComparison,
+      memoryEfficient: memoryComparison < 1,
+      overallImprovement: speedImprovement > 1 && memoryComparison <= 1.1 // 10% memory tolerance
+    };
+  }
+
+  /**
+   * Generate optimization suggestions based on performance
+   */
+  generateOptimizationSuggestions(results) {
+    const suggestions = [];
+    
+    if (results.averageLayoutTime > 10) {
+      suggestions.push({
+        type: 'performance',
+        severity: 'medium',
+        message: 'Layout calculations are taking longer than optimal (>10ms)',
+        recommendation: 'Consider switching to high-performance configuration'
+      });
+    }
+    
+    if (results.memoryUsage > 50 * 1024 * 1024) { // 50MB
+      suggestions.push({
+        type: 'memory',
+        severity: 'high',
+        message: 'High memory usage detected during layout calculations',
+        recommendation: 'Switch to memory-efficient configuration'
+      });
+    }
+    
+    if (results.successRate < 0.95) {
+      suggestions.push({
+        type: 'reliability',
+        severity: 'high',
+        message: 'Layout calculation failures detected',
+        recommendation: 'Review layout complexity and consider simplification'
+      });
+    }
+    
+    return suggestions;
+  }
+
+  /**
+   * Get contextual recommendations based on layout context
+   */
+  getContextualRecommendations(layoutContext) {
+    const recommendations = [];
+    
+    if (layoutContext.itemCount > 100) {
+      recommendations.push({
+        type: 'scalability',
+        message: 'Large number of layout items detected',
+        recommendation: 'Consider enabling memory-efficient configuration and layout virtualization'
+      });
+    }
+    
+    if (layoutContext.hasComplexNesting) {
+      recommendations.push({
+        type: 'complexity',
+        message: 'Complex nested layouts detected',
+        recommendation: 'Consider flattening layout hierarchy for better performance'
+      });
+    }
+    
+    if (layoutContext.isRealTime) {
+      recommendations.push({
+        type: 'real-time',
+        message: 'Real-time layout updates required',
+        recommendation: 'Enable high-performance configuration and layout caching'
+      });
+    }
+    
+    return recommendations;
+  }
+
+  /**
+   * Generate test cases based on layout context
+   */
+  generateContextualTestCases(layoutContext) {
+    const testCases = [];
+    
+    // Base test case from context
+    testCases.push({
+      name: 'context-specific',
+      width: layoutContext.targetWidth || 120,
+      height: layoutContext.targetHeight || 30,
+      flexDirection: layoutContext.direction || yoga.FLEX_DIRECTION_COLUMN,
+      itemCount: layoutContext.itemCount || 10
+    });
+    
+    // Stress test cases
+    testCases.push({
+      name: 'stress-test',
+      width: (layoutContext.targetWidth || 120) * 2,
+      height: (layoutContext.targetHeight || 30) * 2,
+      flexDirection: yoga.FLEX_DIRECTION_ROW,
+      itemCount: Math.min((layoutContext.itemCount || 10) * 3, 100)
+    });
+    
+    return testCases;
+  }
+
+  /**
+   * Set up event handlers for configuration optimization
+   */
+  setupConfigOptimizationHandlers() {
+    this.configOptimizer.on('analysis-complete', (capabilities) => {
+      console.log(chalk.green('🧪 Yoga capabilities analysis complete'));
+      this.emit('yoga-capabilities-analyzed', capabilities);
+    });
+    
+    this.configOptimizer.on('config-created', ({ name, optimizations }) => {
+      console.log(chalk.cyan(`📐 Configuration created: ${name}`));
+      this.emit('config-created', { name, optimizations });
+    });
+    
+    this.configOptimizer.on('performance-analyzed', ({ configName, results }) => {
+      this.emit('config-performance-analyzed', { configName, results });
+    });
+  }
+
+  // === MEMORY OPTIMIZATION ===
+
+  /**
+   * Initialize advanced memory optimization
+   */
+  async initializeMemoryOptimization() {
+    try {
+      // Memory optimizer is already initialized in constructor
+      console.log(chalk.green('🧠 Memory optimization initialized with node pooling'));
+      this.emit('memory-optimization-ready');
+      
+    } catch (error) {
+      console.warn(chalk.yellow('⚠️  Memory optimization initialization failed:'), error.message);
+      // Continue without memory optimization
+    }
+  }
+
+  /**
+   * Set up event handlers for memory optimization
+   */
+  setupMemoryOptimizationHandlers() {
+    if (!this.memoryOptimizer) return;
+
+    this.memoryOptimizer.on('node-acquired', ({ type, poolSize }) => {
+      this.emit('memory-node-acquired', { type, poolSize });
+    });
+
+    this.memoryOptimizer.on('node-released', ({ type, poolSize }) => {
+      this.emit('memory-node-released', { type, poolSize });
+    });
+
+    this.memoryOptimizer.on('memory-optimized', ({ nodesFreed, memoryFreed }) => {
+      console.log(chalk.green(`🧹 Memory optimization: ${nodesFreed} nodes freed, ${(memoryFreed / 1024 / 1024).toFixed(2)}MB released`));
+      this.emit('memory-optimized', { nodesFreed, memoryFreed });
+    });
+
+    this.memoryOptimizer.on('leaks-detected', ({ count, fixed }) => {
+      if (count > 0) {
+        console.warn(chalk.yellow(`⚠️  Memory leaks detected: ${count}, fixed: ${fixed}`));
+        this.emit('memory-leaks-detected', { count, fixed });
+      }
+    });
+
+    this.memoryOptimizer.on('memory-report', (report) => {
+      this.emit('memory-report', report);
+    });
+  }
+
+  // === TERMINAL DETECTION ===
+
+  /**
+   * Initialize advanced terminal detection and adaptive scaling
+   */
+  async initializeTerminalDetection() {
+    try {
+      // Terminal detector is already initialized in constructor
+      await this.terminalDetector.initialize();
+      
+      // Update current terminal state
+      this.currentTerminalState = this.terminalDetector.getCurrentDimensions();
+      this.adaptiveScaling = this.terminalDetector.getAdaptiveScaling();
+      this.layoutBreakpoint = this.currentTerminalState?.breakpoint || 'md';
+      
+      console.log(chalk.green('🖥️  Terminal detection initialized with adaptive scaling'));
+      this.emit('terminal-detection-ready', {
+        dimensions: this.currentTerminalState,
+        scaling: this.adaptiveScaling
+      });
+      
+    } catch (error) {
+      console.warn(chalk.yellow('⚠️  Terminal detection initialization failed:'), error.message);
+      // Continue without terminal detection
+    }
+  }
+
+  /**
+   * Set up event handlers for terminal detection
+   */
+  setupTerminalDetectionHandlers() {
+    if (!this.terminalDetector) return;
+
+    this.terminalDetector.on('dimensions-changed', ({ previous, current, scaling }) => {
+      console.log(chalk.cyan(`📐 Terminal resized: ${current.width}x${current.height} (${current.category})`));
+      
+      // Update current state
+      this.currentTerminalState = current;
+      this.adaptiveScaling = scaling;
+      this.layoutBreakpoint = current.breakpoint;
+      
+      // Invalidate cache for terminal-dependent layouts
+      this.invalidateSmartCache({
+        terminalSize: current,
+        reason: 'terminal-resize'
+      });
+      
+      this.emit('terminal-dimensions-changed', {
+        previous,
+        current,
+        scaling,
+        breakpoint: current.breakpoint
+      });
+    });
+
+    this.terminalDetector.on('capabilities-changed', (capabilities) => {
+      console.log(chalk.blue(`🎨 Terminal capabilities changed: ${capabilities.tier} tier`));
+      
+      // Update adaptive scaling
+      this.adaptiveScaling = this.terminalDetector.getAdaptiveScaling();
+      
+      // Invalidate cache for capability-dependent layouts
+      this.invalidateSmartCache({
+        capabilities: capabilities,
+        reason: 'capabilities-change'
+      });
+      
+      this.emit('terminal-capabilities-changed', capabilities);
+    });
+
+    this.terminalDetector.on('detector-ready', (dimensions) => {
+      this.emit('terminal-detector-ready', dimensions);
+    });
+  }
+
+  /**
+   * Get current terminal dimensions with adaptive scaling
+   */
+  getCurrentTerminalInfo() {
+    if (!this.terminalDetector) {
+      return this.getFallbackTerminalInfo();
+    }
+    
+    return {
+      dimensions: this.terminalDetector.getCurrentDimensions(),
+      capabilities: this.terminalDetector.getCurrentCapabilities(),
+      scaling: this.terminalDetector.getAdaptiveScaling(),
+      stats: this.terminalDetector.getDetectionStats()
+    };
+  }
+
+  /**
+   * Fallback terminal info when detector is disabled
+   */
+  getFallbackTerminalInfo() {
+    const width = process.stdout.columns || 120;
+    const height = process.stdout.rows || 30;
+    
+    return {
+      dimensions: {
+        width,
+        height,
+        category: width < 80 ? 'small' : width > 160 ? 'large' : 'medium',
+        breakpoint: width < 80 ? 'sm' : width > 160 ? 'lg' : 'md'
+      },
+      capabilities: { tier: 'standard', score: 0.5 },
+      scaling: { overall: 1.0, recommendation: 'responsive' },
+      stats: { isMonitoring: false }
+    };
+  }
+
+  /**
+   * Generate adaptive layout optimized for current terminal
+   */
+  async generateAdaptiveResponsiveLayout(items, options = {}) {
+    const terminalInfo = this.getCurrentTerminalInfo();
+    const adaptiveOptions = this.applyAdaptiveOptions(options, terminalInfo);
+    
+    console.log(chalk.blue(`🔄 Generating adaptive layout for ${terminalInfo.dimensions.category} terminal (${terminalInfo.dimensions.breakpoint})`));
+    
+    return this.generateResponsiveLayout(items, adaptiveOptions);
+  }
+
+  /**
+   * Apply adaptive options based on terminal capabilities
+   */
+  applyAdaptiveOptions(baseOptions, terminalInfo) {
+    const { dimensions, capabilities, scaling } = terminalInfo;
+    
+    const adaptiveOptions = {
+      ...baseOptions,
+      
+      // Dimension-based adaptations
+      terminalSize: dimensions,
+      breakpoint: dimensions.breakpoint,
+      category: dimensions.category,
+      
+      // Capability-based adaptations
+      colorSupport: capabilities.colors?.trueColor ? 'full' : 'basic',
+      unicodeSupport: capabilities.unicode?.extendedSupport || false,
+      mouseSupport: capabilities.mouse?.supported || false,
+      
+      // Scaling adaptations
+      scalingFactor: scaling.overall,
+      layoutStrategy: scaling.layout?.recommendation || 'responsive',
+      typographyMode: scaling.typography?.recommendation || 'ascii',
+      spacingMode: scaling.spacing?.recommendation || 'comfortable',
+      performanceMode: scaling.performance?.recommendation || 'static',
+      
+      // Performance optimizations
+      enableAnimations: scaling.performance?.animations || false,
+      enableInteractivity: scaling.interaction?.mouseEnabled || false,
+      
+      // Accessibility adaptations
+      highContrast: scaling.accessibility?.highContrast || false,
+      reducedMotion: scaling.accessibility?.reducedMotion || false,
+      
+      // Terminal-specific optimizations
+      terminalOptimized: true,
+      adaptiveScaling: true
+    };
+    
+    return adaptiveOptions;
+  }
+
+  /**
+   * Get terminal-optimized breakpoint configuration
+   */
+  getTerminalBreakpoints() {
+    if (!this.terminalDetector) {
+      return this.breakpoints; // Use default breakpoints
+    }
+    
+    const terminalInfo = this.getCurrentTerminalInfo();
+    const scaling = terminalInfo.scaling;
+    
+    // Adjust breakpoints based on adaptive scaling
+    const scaleFactor = scaling.overall;
+    
+    return {
+      xs: { width: Math.floor(50 * scaleFactor), height: Math.floor(15 * scaleFactor) },
+      sm: { width: Math.floor(80 * scaleFactor), height: Math.floor(24 * scaleFactor) },
+      md: { width: Math.floor(120 * scaleFactor), height: Math.floor(30 * scaleFactor) },
+      lg: { width: Math.floor(160 * scaleFactor), height: Math.floor(40 * scaleFactor) },
+      xl: { width: Math.floor(200 * scaleFactor), height: Math.floor(50 * scaleFactor) },
+      xxl: { width: Math.floor(240 * scaleFactor), height: Math.floor(60 * scaleFactor) }
+    };
+  }
+
+  /**
+   * Get adaptive grid configuration based on terminal
+   */
+  getAdaptiveGridConfig(targetColumns = null) {
+    const terminalInfo = this.getCurrentTerminalInfo();
+    const { dimensions, scaling } = terminalInfo;
+    
+    // Calculate optimal columns based on terminal width and scaling
+    const baseColumns = targetColumns || Math.floor(dimensions.width / 30);
+    const scaledColumns = Math.max(1, Math.floor(baseColumns * scaling.layout.factor));
+    
+    return {
+      columns: scaledColumns,
+      maxColumns: Math.floor(dimensions.width / 20),
+      minColumnWidth: 20 * scaling.layout.factor,
+      gutter: scaling.spacing.gutter || 2,
+      padding: scaling.spacing.padding || 2,
+      margin: scaling.spacing.margin || 1,
+      responsive: true,
+      breakpoint: dimensions.breakpoint,
+      adaptiveScaling: scaling
+    };
+  }
+
+  /**
+   * Print terminal analysis report
+   */
+  printTerminalAnalysis() {
+    if (!this.terminalDetector) {
+      console.log(chalk.yellow('Terminal detection is disabled'));
+      return;
+    }
+
+    this.terminalDetector.printTerminalAnalysis();
+  }
+
+  /**
+   * Get terminal detection statistics
+   */
+  getTerminalDetectionStats() {
+    if (!this.terminalDetector) {
+      return { enabled: false };
+    }
+
+    const terminalInfo = this.getCurrentTerminalInfo();
+    return {
+      enabled: true,
+      ...terminalInfo.stats,
+      currentDimensions: terminalInfo.dimensions,
+      currentCapabilities: terminalInfo.capabilities,
+      adaptiveScaling: terminalInfo.scaling
+    };
+  }
+
+  // === LAYOUT MEMOIZATION ===
+
+  /**
+   * Initialize layout memoization system
+   */
+  async initializeMemoization() {
+    try {
+      // Memoization system is already initialized in constructor
+      
+      // Create memoized versions of expensive layout functions
+      this.createMemoizedLayoutFunctions();
+      
+      console.log(chalk.green('🧠 Layout memoization system initialized'));
+      this.emit('memoization-ready');
+      
+    } catch (error) {
+      console.warn(chalk.yellow('⚠️  Memoization initialization failed:'), error.message);
+      // Continue without memoization
+    }
+  }
+
+  /**
+   * Set up event handlers for memoization system
+   */
+  setupMemoizationHandlers() {
+    if (!this.memoization) return;
+
+    this.memoization.on('component-invalidated', ({ componentName, count }) => {
+      if (count > 0) {
+        console.log(chalk.blue(`🔄 Invalidated ${count} cache entries for ${componentName}`));
+      }
+      this.emit('memoization-invalidated', { componentName, count });
+    });
+
+    this.memoization.on('dependency-invalidated', ({ dependency, count }) => {
+      if (count > 0) {
+        console.log(chalk.cyan(`🔄 Dependency invalidation: ${dependency} (${count} entries)`));
+      }
+      this.emit('memoization-dependency-invalidated', { dependency, count });
+    });
+
+    this.memoization.on('cleanup-performed', ({ entriesRemoved }) => {
+      if (entriesRemoved > 0) {
+        console.log(chalk.gray(`🧹 Memoization cleanup: ${entriesRemoved} entries removed`));
+      }
+      this.emit('memoization-cleanup', { entriesRemoved });
+    });
+  }
+
+  /**
+   * Create memoized versions of expensive layout functions
+   */
+  createMemoizedLayoutFunctions() {
+    // Memoize responsive layout generation
+    this.memoizedGenerateResponsiveLayout = this.memoization.memoizeLayout(
+      this.generateResponsiveLayoutInternal.bind(this),
+      {
+        name: 'responsive-layout',
+        dependencies: ['TERM_COLUMNS', 'TERM_ROWS'],
+        ttl: 5 * 60 * 1000 // 5 minutes
+      }
+    );
+
+    // Memoize adaptive layout generation
+    this.memoizedGenerateAdaptiveLayout = this.memoization.memoizeLayout(
+      this.generateAdaptiveLayoutInternal.bind(this),
+      {
+        name: 'adaptive-layout',
+        dependencies: ['TERM_COLUMNS', 'TERM_ROWS', 'TERM_PROGRAM'],
+        ttl: 3 * 60 * 1000 // 3 minutes
+      }
+    );
+
+    // Memoize content analysis
+    this.memoizedAnalyzeContentCharacteristics = this.memoization.memo(
+      this.analyzeContentCharacteristicsInternal.bind(this),
+      {
+        name: 'content-analysis',
+        ttl: 10 * 60 * 1000, // 10 minutes
+        areEqual: (prevArgs, nextArgs) => {
+          // Custom equality for content analysis
+          return this.contentAnalysisArgsEqual(prevArgs, nextArgs);
+        }
+      }
+    );
+
+    // Memoize layout strategy selection
+    this.memoizedSelectLayoutStrategy = this.memoization.memo(
+      this.selectLayoutStrategyInternal.bind(this),
+      {
+        name: 'layout-strategy',
+        ttl: 2 * 60 * 1000 // 2 minutes
+      }
+    );
+
+    // Memoize grid calculations
+    this.memoizedCalculateResponsiveGrid = this.memoization.memo(
+      this.calculateResponsiveGridInternal.bind(this),
+      {
+        name: 'grid-calculation',
+        dependencies: ['TERM_COLUMNS', 'TERM_ROWS'],
+        ttl: 5 * 60 * 1000 // 5 minutes
+      }
+    );
+  }
+
+  /**
+   * Custom equality comparison for content analysis arguments
+   */
+  contentAnalysisArgsEqual(prevArgs, nextArgs) {
+    if (prevArgs.length !== nextArgs.length) return false;
+    
+    const [prevItems] = prevArgs;
+    const [nextItems] = nextArgs;
+    
+    if (prevItems.length !== nextItems.length) return false;
+    
+    // Compare essential content properties that affect analysis
+    for (let i = 0; i < prevItems.length; i++) {
+      const prev = prevItems[i];
+      const next = nextItems[i];
+      
+      if (prev.type !== next.type ||
+          prev.size !== next.size ||
+          (prev.text && prev.text.length) !== (next.text && next.text.length) ||
+          prev.children?.length !== next.children?.length) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  /**
+   * Generate memoized responsive layout
+   */
+  async generateMemoizedResponsiveLayout(items, options = {}) {
+    if (!this.memoization) {
+      return this.generateResponsiveLayout(items, options);
+    }
+    
+    return this.memoizedGenerateResponsiveLayout(items, options);
+  }
+
+  /**
+   * Generate memoized adaptive layout
+   */
+  async generateMemoizedAdaptiveLayout(items, options = {}) {
+    if (!this.memoization) {
+      return this.generateAdaptiveResponsiveLayout(items, options);
+    }
+    
+    return this.memoizedGenerateAdaptiveLayout(items, options);
+  }
+
+  /**
+   * Internal implementation for responsive layout generation (for memoization)
+   */
+  async generateResponsiveLayoutInternal(items, options = {}) {
+    // This is the original generateResponsiveLayout implementation
+    // but extracted for memoization purposes
+    return this.generateResponsiveLayout(items, options);
+  }
+
+  /**
+   * Internal implementation for adaptive layout generation (for memoization)
+   */
+  async generateAdaptiveLayoutInternal(items, options = {}) {
+    // This is the original generateAdaptiveResponsiveLayout implementation
+    // but extracted for memoization purposes
+    return this.generateAdaptiveResponsiveLayout(items, options);
+  }
+
+  /**
+   * Internal implementation for content analysis (for memoization)
+   */
+  async analyzeContentCharacteristicsInternal(items) {
+    // Original analyzeContentCharacteristics implementation
+    return this.analyzeContentCharacteristics(items);
+  }
+
+  /**
+   * Internal implementation for layout strategy selection (for memoization)
+   */
+  async selectLayoutStrategyInternal(contentAnalysis, options) {
+    // Original selectLayoutStrategy implementation
+    return this.selectLayoutStrategy(contentAnalysis, options);
+  }
+
+  /**
+   * Internal implementation for grid calculation (for memoization)
+   */
+  async calculateResponsiveGridInternal(items, strategy, options) {
+    // Original calculateResponsiveGrid implementation
+    return this.calculateResponsiveGrid(items, strategy, options);
+  }
+
+  /**
+   * Invalidate memoization caches when dependencies change
+   */
+  invalidateMemoizationCaches(reason = 'manual') {
+    if (!this.memoization) return 0;
+    
+    console.log(chalk.blue(`🔄 Invalidating memoization caches (${reason})`));
+    
+    let totalInvalidated = 0;
+    
+    // Invalidate layout-related caches
+    totalInvalidated += this.memoization.invalidateComponent('responsive-layout');
+    totalInvalidated += this.memoization.invalidateComponent('adaptive-layout');
+    totalInvalidated += this.memoization.invalidateComponent('grid-calculation');
+    
+    // Conditionally invalidate content analysis and strategy if content changed
+    if (reason === 'content-change') {
+      totalInvalidated += this.memoization.invalidateComponent('content-analysis');
+      totalInvalidated += this.memoization.invalidateComponent('layout-strategy');
+    }
+    
+    this.emit('memoization-mass-invalidated', { reason, totalInvalidated });
+    return totalInvalidated;
+  }
+
+  /**
+   * Get memoization performance statistics
+   */
+  getMemoizationStats() {
+    if (!this.memoization) {
+      return { enabled: false };
+    }
+
+    const generalStats = this.memoization.getPerformanceStats();
+    const componentStats = this.memoization.getAllComponentStats();
+
+    return {
+      enabled: true,
+      general: generalStats,
+      components: componentStats,
+      isProfileEnabled: this.options.enableMemoizationProfiling
+    };
+  }
+
+  /**
+   * Print memoization analysis report
+   */
+  printMemoizationAnalysis() {
+    if (!this.memoization) {
+      console.log(chalk.yellow('Layout memoization is disabled'));
+      return;
+    }
+
+    this.memoization.printMemoizationAnalysis();
+  }
+
+  /**
+   * Warm up memoization caches for common operations
+   */
+  async warmMemoizationCaches(sampleItems = null) {
+    if (!this.memoization) return;
+    
+    console.log(chalk.blue('🔥 Warming memoization caches...'));
+    
+    // Use sample items or create test items
+    const items = sampleItems || this.createSampleItems();
+    
+    try {
+      // Warm up responsive layout cache
+      await this.memoizedGenerateResponsiveLayout(items, { strategy: 'magazine' });
+      await this.memoizedGenerateResponsiveLayout(items, { strategy: 'portfolio' });
+      
+      // Warm up adaptive layout cache
+      await this.memoizedGenerateAdaptiveLayout(items, { responsive: true });
+      
+      console.log(chalk.green('✅ Memoization caches warmed'));
+      this.emit('memoization-warmed');
+      
+    } catch (error) {
+      console.warn(chalk.yellow('⚠️  Memoization cache warming failed:'), error.message);
+    }
+  }
+
+  /**
+   * Create sample items for cache warming
+   */
+  createSampleItems() {
+    return [
+      { type: 'text', content: 'Sample text', size: 'small' },
+      { type: 'image', src: 'sample.jpg', size: 'medium' },
+      { type: 'container', children: [
+        { type: 'text', content: 'Nested text' }
+      ]},
+      { type: 'text', content: 'Another text element', size: 'large' }
+    ];
+  }
+
+  /**
+   * Generate memory-optimized layout using node pooling
+   */
+  async generateMemoryOptimizedLayout(items, options = {}) {
+    if (!this.memoryOptimizer) {
+      // Fallback to regular layout generation
+      return this.generateResponsiveLayout(items, options);
+    }
+
+    const operationId = ++this.operationId;
+    const operation = {
+      id: operationId,
+      type: 'memory-optimized-layout',
+      items: items.length,
+      startTime: Date.now(),
+      status: 'running'
+    };
+
+    this.activeOperations.set(operationId, operation);
+
+    try {
+      await this.showPhase('memory-prep', 'Preparing memory-optimized layout generation...');
+
+      // Acquire nodes from memory pool
+      const requiredNodes = Math.min(items.length + 5, 50); // Conservative estimate
+      const managedNodes = [];
+
+      for (let i = 0; i < requiredNodes; i++) {
+        const nodeType = this.determineNodeType(items[i] || {});
+        const managedNode = this.memoryOptimizer.createManagedNode(nodeType);
+        managedNodes.push(managedNode);
+      }
+
+      console.log(chalk.cyan(`🧠 Acquired ${managedNodes.length} managed nodes from memory pool`));
+
+      // Generate layout using managed nodes
+      const layout = await this.generateLayoutWithManagedNodes(items, managedNodes, options, operationId);
+
+      // Dispose managed nodes (they automatically return to pool)
+      managedNodes.forEach(node => node.dispose());
+
+      operation.status = 'completed';
+      operation.endTime = Date.now();
+
+      this.emit('memory-optimized-layout-complete', {
+        operationId,
+        layout,
+        duration: operation.endTime - operation.startTime,
+        nodesUsed: managedNodes.length
+      });
+
+      return layout;
+
+    } catch (error) {
+      operation.status = 'failed';
+      operation.error = error.message;
+
+      this.logger.error('Memory-optimized layout generation failed:', error);
+      this.emit('memory-optimized-layout-failed', { operationId, error });
+
+      throw error;
+
+    } finally {
+      // Clean up operation after delay
+      setTimeout(() => {
+        this.activeOperations.delete(operationId);
+      }, 30000);
+    }
+  }
+
+  /**
+   * Generate layout using managed nodes
+   */
+  async generateLayoutWithManagedNodes(items, managedNodes, options, operationId) {
+    const totalSteps = 4;
+    let currentStep = 0;
+
+    const updateProgress = (step, message) => {
+      currentStep = step;
+      const progress = Math.round((currentStep / totalSteps) * 100);
+
+      this.emit('memory-layout-progress', {
+        operationId,
+        step: currentStep,
+        totalSteps,
+        progress,
+        message
+      });
+    };
+
+    // Step 1: Memory-optimized content analysis
+    updateProgress(1, 'Analyzing content with memory optimization...');
+    const contentAnalysis = await this.analyzeContentCharacteristics(items);
+
+    // Step 2: Select strategy with memory considerations
+    updateProgress(2, 'Selecting memory-efficient layout strategy...');
+    const strategy = await this.selectLayoutStrategy(contentAnalysis, {
+      ...options,
+      memoryOptimized: true
+    });
+
+    // Step 3: Create layout using managed nodes
+    updateProgress(3, 'Creating layout with managed nodes...');
+    const layout = await this.createLayoutFromManagedNodes(
+      items,
+      managedNodes,
+      strategy,
+      options
+    );
+
+    // Step 4: Optimize final layout
+    updateProgress(4, 'Optimizing memory-efficient layout...');
+    const optimizedLayout = await this.optimizeLayout(layout, {
+      ...options,
+      memoryOptimized: true
+    });
+
+    return optimizedLayout;
+  }
+
+  /**
+   * Create layout structure using managed nodes
+   */
+  async createLayoutFromManagedNodes(items, managedNodes, strategy, options) {
+    // Implementation would use the managed nodes to create the layout structure
+    // For now, return a simplified layout structure
+    return {
+      type: 'memory-optimized-layout',
+      items: items.map((item, index) => ({
+        ...item,
+        nodeId: managedNodes[index % managedNodes.length]?.node?.toString() || 'fallback',
+        memoryManaged: true
+      })),
+      strategy: strategy,
+      metadata: {
+        memoryOptimized: true,
+        managedNodesUsed: managedNodes.length,
+        createdAt: Date.now()
+      }
+    };
+  }
+
+  /**
+   * Determine appropriate node type for an item
+   */
+  determineNodeType(item) {
+    if (item.type === 'container' || item.children) return 'container';
+    if (item.type === 'text') return 'text';
+    if (item.type === 'image') return 'image';
+    return 'default';
+  }
+
+  /**
+   * Get memory optimization statistics
+   */
+  getMemoryOptimizationStats() {
+    if (!this.memoryOptimizer) {
+      return { enabled: false };
+    }
+
+    const poolStats = this.memoryOptimizer.getPoolStatistics();
+    const optimizerStats = this.memoryOptimizer.stats;
+
+    return {
+      enabled: true,
+      pools: poolStats,
+      statistics: optimizerStats,
+      isMonitoring: this.options.enableMemoryProfiling,
+      leakDetectionEnabled: this.options.enableLeakDetection
+    };
+  }
+
+  /**
+   * Run memory analysis and optimization
+   */
+  async runMemoryAnalysis() {
+    if (!this.memoryOptimizer) {
+      console.log(chalk.yellow('Memory optimization is disabled'));
+      return null;
+    }
+
+    console.log(chalk.blue('🧠 Running comprehensive memory analysis...'));
+
+    // Generate memory report
+    const report = this.memoryOptimizer.generateMemoryReport();
+
+    // Detect and fix leaks
+    const leakResults = this.memoryOptimizer.detectAndFixLeaks();
+
+    // Optimize memory usage
+    const optimizationResults = this.memoryOptimizer.optimizeMemory();
+
+    const analysis = {
+      report,
+      leakResults,
+      optimizationResults,
+      analyzedAt: Date.now()
+    };
+
+    this.emit('memory-analysis-complete', analysis);
+    return analysis;
+  }
+
+  /**
+   * Print memory analysis report
+   */
+  printMemoryAnalysis() {
+    if (!this.memoryOptimizer) {
+      console.log(chalk.yellow('Memory optimization is disabled'));
+      return;
+    }
+
+    this.memoryOptimizer.printMemoryAnalysis();
+  }
+
+  /**
+   * Get configuration optimization statistics
+   */
+  getConfigOptimizationStats() {
+    if (!this.options.enableConfigOptimization) {
+      return { enabled: false };
+    }
+    
+    const configStats = this.configOptimizer.getConfigurationStats();
+    
+    return {
+      enabled: true,
+      ...configStats,
+      activeConfig: this.activeConfig ? 'active' : 'none',
+      configSwitches: this.configHistory.length,
+      baselineEstablished: !!this.performanceBaseline,
+      performanceBaseline: this.performanceBaseline
+    };
+  }
+
+  /**
+   * Print comprehensive configuration analysis
+   */
+  printConfigurationAnalysis() {
+    console.log(chalk.blue('\n🧘 Enhanced Yoga Layout Engine - Configuration Analysis'));
+    console.log(chalk.blue('======================================================'));
+    
+    const stats = this.getConfigOptimizationStats();
+    
+    if (!stats.enabled) {
+      console.log(chalk.yellow('Configuration optimization is disabled'));
+      return;
+    }
+    
+    console.log(`Total Configurations: ${stats.totalConfigurations}`);
+    console.log(`Configuration Switches: ${stats.configSwitches}`);
+    console.log(`Average Performance: ${stats.averagePerformance.toFixed(2)}ms`);
+    console.log(`Baseline Established: ${stats.baselineEstablished ? 'Yes' : 'No'}`);
+    
+    if (stats.baselineEstablished) {
+      const baseline = stats.performanceBaseline;
+      console.log(chalk.cyan('\n📊 Performance Baseline:'));
+      console.log(`  Average Layout Time: ${baseline.averageLayoutTime.toFixed(2)}ms`);
+      console.log(`  Memory Usage: ${(baseline.memoryUsage / 1024 / 1024).toFixed(2)}MB`);
+      console.log(`  Success Rate: ${(baseline.successRate * 100).toFixed(1)}%`);
+    }
+    
+    // Print detailed configuration analysis
+    this.configOptimizer.printAnalysisReport();
+  }
+
+  setupEventForwarding() {
+    // TODO: Set up event forwarding when grid system and layout strategies are implemented
+    this.logger.debug('Event forwarding setup (basic mode)');
+  }
+
+  // === PROGRESS REPORTING ===
+
+  async showPhase(phase, message) {
+    this.logger.info(`[${phase.toUpperCase()}] ${message}`);
+  }
+
+  // === ENHANCED RESPONSIVE LAYOUT GENERATION ===
+
+  async generateResponsiveLayout(items, options = {}) {
+    const operationId = ++this.operationId;
+    const operation = {
+      id: operationId,
+      type: 'responsive-layout',
+      items: items.length,
+      startTime: Date.now(),
+      status: 'running'
+    };
+    
+    this.activeOperations.set(operationId, operation);
+    
+    try {
+      // Show preparation phase
+      await this.showPhase('preparation', 'Analyzing content for optimal layout...');
+      
+      // Emit start event
+      this.emit('layout-generation-start', { 
+        operationId, 
+        itemCount: items.length,
+        options 
+      });
+      
+      // Check smart cache first
+      const cacheKey = this.generateCacheKey(items, options);
+      const cachedResult = this.getFromSmartCache(cacheKey);
+      
+      if (cachedResult) {
+        this.logger.debug('Using smart cached layout');
+        this.emit('layout-cache-hit', { operationId, cacheKey, smart: true });
+        
+        // Show quick message for cached result
+        await this.showPhase('info', 'Smart cached layout retrieved');
+        
+        operation.status = 'completed';
+        operation.endTime = Date.now();
+        operation.cached = true;
+        
+        return cachedResult.layout;
+      }
+      
+      // Show processing phase
+      await this.showPhase('processing', 'Generating responsive layout...');
+      
+      // Generate layout with ceremonial progress
+      const startComputeTime = Date.now();
+      const layout = await this.generateLayoutWithCeremony(items, options, operationId);
+      const computeTime = Date.now() - startComputeTime;
+      
+      // Store in smart cache with performance tracking
+      this.setInSmartCache(cacheKey, layout, computeTime);
+      
+      // Show completion message
+      await this.showPhase('completion', 'Layout generation complete with smart caching');
+      
+      operation.status = 'completed';
+      operation.endTime = Date.now();
+      operation.cached = false;
+      
+      this.emit('layout-generation-complete', { 
+        operationId, 
+        layout, 
+        duration: operation.endTime - operation.startTime,
+        cached: false
+      });
+      
+      return layout;
+      
+    } catch (error) {
+      operation.status = 'failed';
+      operation.error = error.message;
+      
+      this.logger.error('Layout generation failed:', error);
+      this.emit('layout-generation-failed', { operationId, error });
+      
+      // Show error message
+      await this.showPhase('error', `Layout generation failed: ${error.message}`);
+      
+      throw error;
+      
+    } finally {
+      // Clean up operation after delay
+      setTimeout(() => {
+        this.activeOperations.delete(operationId);
+      }, 30000); // 30 second cleanup delay
+    }
+  }
+
+  async generateLayoutWithCeremony(items, options, operationId) {
+    const totalSteps = 5;
+    let currentStep = 0;
+    
+    const updateProgress = (step, message) => {
+      currentStep = step;
+      const progress = Math.round((currentStep / totalSteps) * 100);
+      
+      this.emit('layout-progress', { 
+        operationId, 
+        step: currentStep,
+        totalSteps,
+        progress,
+        message,
+        emotionalState: this.currentEmotionalState
+      });
+    };
+    
+    // Step 1: Content Analysis
+    updateProgress(1, 'Analyzing content characteristics...');
+    const contentAnalysis = await this.analyzeContentCharacteristics(items);
+    
+    // Step 2: Strategy Selection
+    updateProgress(2, 'Selecting optimal layout strategy...');
+    const strategy = await this.selectLayoutStrategy(contentAnalysis, options);
+    
+    // Step 3: Grid Calculation
+    updateProgress(3, 'Calculating responsive grid system...');
+    const grid = await this.calculateResponsiveGrid(items, strategy, options);
+    
+    // Step 4: Emotional State Integration
+    updateProgress(4, 'Integrating emotional state adjustments...');
+    const emotionallyAdjustedGrid = await this.adjustLayoutForEmotionalState(grid, this.currentEmotionalState);
+    
+    // Step 5: Final Optimization
+    updateProgress(5, 'Optimizing layout for performance...');
+    const optimizedLayout = await this.optimizeLayout(emotionallyAdjustedGrid, options);
+    
+    return optimizedLayout;
+  }
+
+  // === EMOTIONAL STATE INTEGRATION ===
+
+  async adjustLayoutForEmotionalState(layout, emotionalState) {
+    const emotionalAdjustments = {
+      'neutral': { spacing: 1.0, energy: 1.0, rhythm: 'steady' },
+      'focused': { spacing: 1.1, energy: 0.9, rhythm: 'precise' },
+      'engaged': { spacing: 0.95, energy: 1.1, rhythm: 'dynamic' },
+      'excited': { spacing: 0.8, energy: 1.3, rhythm: 'energetic' },
+      'joyful': { spacing: 0.85, energy: 1.2, rhythm: 'playful' },
+      'accomplished': { spacing: 1.2, energy: 1.0, rhythm: 'confident' },
+      'contemplative': { spacing: 1.3, energy: 0.8, rhythm: 'meditative' }
+    };
+    
+    const adjustments = emotionalAdjustments[emotionalState] || emotionalAdjustments['neutral'];
+    
+    // Apply emotional adjustments to layout
+    const adjustedLayout = {
+      ...layout,
+      spacing: layout.spacing * adjustments.spacing,
+      energy: adjustments.energy,
+      rhythm: adjustments.rhythm,
+      emotionalContext: {
+        state: emotionalState,
+        adjustments: adjustments,
+        timestamp: Date.now()
+      }
+    };
+    
+    this.logger.debug(`Applied emotional adjustments for ${emotionalState}:`, adjustments);
+    
+    return adjustedLayout;
+  }
+
+  // === ADAPTIVE TERMINAL LAYOUT GENERATION ===
+
+  async generateAdaptiveLayout(items, options = {}) {
+    const terminalInfo = this.detectTerminalDimensions();
+    const cacheKey = this.generateCacheKey(items, { ...options, terminal: terminalInfo });
+    
+    // Check smart cache first
+    const cachedResult = this.getFromSmartCache(cacheKey);
+    if (cachedResult) {
+      this.logger.debug('Using smart cached adaptive layout');
+      return cachedResult.layout;
+    }
+
+    await this.showPhase('analysis', 'Analyzing terminal environment with smart caching...');
+
+    const startComputeTime = Date.now();
+
+    // Generate layout optimized for current terminal
+    const currentLayout = await this.generateTerminalOptimizedLayout(
+      items, 
+      terminalInfo, 
+      options
+    );
+
+    // Generate fallback layouts for different terminal sizes
+    const fallbackLayouts = await this.generateFallbackLayouts(items, options);
+
+    // Create fluid transition system
+    const transitions = this.generateFluidTransitions(currentLayout, fallbackLayouts);
+
+    const adaptiveLayout = {
+      current: currentLayout,
+      fallbacks: fallbackLayouts,
+      transitions,
+      terminalInfo,
+      metadata: {
+        generated: Date.now(),
+        breakpoint: terminalInfo.breakpoint,
+        capabilities: terminalInfo.capabilities,
+        smartCached: true
+      }
+    };
+
+    const computeTime = Date.now() - startComputeTime;
+    this.setInSmartCache(cacheKey, adaptiveLayout, computeTime);
+    
+    return adaptiveLayout;
+  }
+
+  async generateTerminalOptimizedLayout(items, terminalInfo, options = {}) {
+    const { width, height, capabilities } = terminalInfo;
+    
+    // Adjust layout strategy based on terminal capabilities
+    const strategy = this.selectTerminalStrategy(items, terminalInfo, options);
+    
+    // Generate layout with terminal-specific optimizations
+    const layout = await this.generateBreakpointLayout(
+      items,
+      { width, height },
+      strategy,
+      { ...options, capabilities }
+    );
+
+    // Apply terminal-specific enhancements
+    this.applyTerminalOptimizations(layout, capabilities);
+    
+    return layout;
+  }
+
+  async generateFallbackLayouts(items, options = {}) {
+    const fallbacks = {};
+    
+    for (const [breakpoint, dimensions] of Object.entries(this.breakpoints)) {
+      const strategy = this.layoutStrategies.selectStrategy(items, dimensions, options);
+      
+      fallbacks[breakpoint] = await this.generateBreakpointLayout(
+        items, 
+        dimensions, 
+        strategy, 
+        options
+      );
+    }
+    
+    return fallbacks;
+  }
+
+  selectTerminalStrategy(items, terminalInfo, options = {}) {
+    const { width, capabilities } = terminalInfo;
+    
+    // Select strategy based on terminal characteristics
+    if (!capabilities.hasColor) {
+      return this.layoutStrategies.selectStrategy(items, terminalInfo, {
+        ...options,
+        monochrome: true,
+        enhanced: false
+      });
+    }
+    
+    if (width < 100) {
+      return this.layoutStrategies.selectStrategy(items, terminalInfo, {
+        ...options,
+        compact: true,
+        singleColumn: true
+      });
+    }
+    
+    return this.layoutStrategies.selectStrategy(items, terminalInfo, options);
+  }
+
+  applyTerminalOptimizations(layout, capabilities) {
+    // Apply basic terminal optimizations
+    if (!capabilities.hasColor) {
+      layout.colorMode = 'monochrome';
+    }
+    
+    if (!capabilities.supportsUnicode) {
+      layout.unicodeMode = 'ascii';
+    }
+    
+    if (!capabilities.isTTY) {
+      layout.interactiveMode = false;
+    }
+    
+    // Store capability info for later use
+    layout.terminalCapabilities = capabilities;
+  }
+
+  generateFluidTransitions(currentLayout, fallbackLayouts) {
+    const transitions = {};
+    
+    Object.entries(fallbackLayouts).forEach(([breakpoint, layout]) => {
+      transitions[breakpoint] = {
+        ...this.createTransitionRule(currentLayout, layout),
+        adaptive: true,
+        terminalOptimized: true,
+        smoothing: this.calculateTransitionSmoothing(currentLayout, layout)
+      };
+    });
+    
+    return transitions;
+  }
+
+  calculateTransitionSmoothing(fromLayout, toLayout) {
+    // Calculate optimal transition smoothing based on layout complexity
+    const complexityDiff = Math.abs(
+      (fromLayout.children?.length || 0) - (toLayout.children?.length || 0)
+    );
+    
+    if (complexityDiff > 5) return 'slow';
+    if (complexityDiff > 2) return 'medium';
+    return 'fast';
+  }
+
+  async generateBreakpointLayout(items, dimensions, strategy, options = {}) {
+    const root = yoga.Node.create();
+    
+    // Configure root container
+    root.setStyleWidth(dimensions.width);
+    root.setStyleHeight(dimensions.height);
+    root.setFlexDirection(yoga.FLEX_DIRECTION_COLUMN);
+    root.setPadding(yoga.EDGE_ALL, this.calculatePadding(dimensions.width));
+
+    // Apply layout strategy
+    const layoutNodes = await strategy.arrangeItems(items, root, dimensions);
+    
+    // Calculate layout
+    root.calculateLayout(dimensions.width, dimensions.height, yoga.DIRECTION_LTR);
+    
+    // Extract layout information
+    const layout = this.extractResponsiveLayoutInfo(root, layoutNodes, dimensions);
+    
+    // Optimize layout for performance
+    this.optimizeLayout(layout, dimensions);
+    
+    // Clean up
+    root.freeRecursive();
+    
+    return layout;
+  }
+
+  // === ADVANCED GRID SYSTEM ===
+
+  createAdvancedGrid(items, dimensions, options = {}) {
+    const contentDensity = this.calculateContentDensity(items);
+    const gridConfig = this.gridSystem.calculateOptimalGrid(
+      items, 
+      dimensions, 
+      contentDensity,
+      options
+    );
+
+    return this.gridSystem.generateGrid(gridConfig);
+  }
+
+  calculateContentDensity(items) {
+    const typeWeights = {
+      'hero-image': 3.0,
+      'image': 2.0,
+      'video': 2.5,
+      'document': 1.5,
+      'text': 1.0,
+      'audio': 0.8
+    };
+
+    const totalWeight = items.reduce((sum, item) => {
+      const weight = typeWeights[item.type] || 1.0;
+      return sum + weight;
+    }, 0);
+
+    return {
+      total: totalWeight,
+      average: totalWeight / items.length,
+      distribution: this.calculateTypeDistribution(items)
+    };
+  }
+
+  calculateTypeDistribution(items) {
+    const distribution = {};
+    items.forEach(item => {
+      distribution[item.type] = (distribution[item.type] || 0) + 1;
+    });
+    
+    return Object.entries(distribution).map(([type, count]) => ({
+      type,
+      count,
+      percentage: (count / items.length) * 100
+    }));
+  }
+
+  // === INTELLIGENT LAYOUT ALGORITHMS ===
+
+  async selectOptimalLayoutAlgorithm(items, dimensions, userPreferences = {}) {
+    // Comprehensive content analysis
+    const contentAnalysis = await this.performDeepContentAnalysis(items);
+    const userContext = this.analyzeUserContext(userPreferences);
+    const terminalConstraints = this.analyzeTerminalConstraints(dimensions);
+    
+    // Score all available algorithms
+    const algorithmScores = await this.scoreAllAlgorithms(
+      contentAnalysis, 
+      userContext, 
+      terminalConstraints
+    );
+    
+    // Select best algorithm with confidence scoring
+    const selectedAlgorithm = this.selectBestAlgorithm(algorithmScores, userPreferences);
+    
+    this.logger.debug('Algorithm selection complete:', {
+      selected: selectedAlgorithm.name,
+      confidence: selectedAlgorithm.confidence,
+      alternatives: algorithmScores.slice(0, 3)
+    });
+    
+    return selectedAlgorithm;
+  }
+
+  async performDeepContentAnalysis(items) {
+    const basicAnalysis = this.analyzeContent(items);
+    
+    // Enhanced analysis with content relationships
+    const enhancedAnalysis = {
+      ...basicAnalysis,
+      
+      // Content type clustering
+      contentClusters: this.identifyContentClusters(items),
+      
+      // Narrative structure detection
+      narrativeStructure: this.detectNarrativeStructure(items),
+      
+      // Visual hierarchy signals
+      visualHierarchy: this.analyzeVisualHierarchy(items),
+      
+      // Content relationships
+      contentRelationships: this.mapContentRelationships(items),
+      
+      // Submission intent classification
+      submissionIntent: this.classifySubmissionIntent(items),
+      
+      // Quality assessment
+      contentQuality: await this.assessContentQuality(items)
+    };
+    
+    return enhancedAnalysis;
+  }
+
+  identifyContentClusters(items) {
+    const clusters = {
+      visual: items.filter(item => ['image', 'video', 'graphic'].includes(item.type)),
+      textual: items.filter(item => ['text', 'document', 'markdown'].includes(item.type)),
+      media: items.filter(item => ['audio', 'video', 'animation'].includes(item.type)),
+      data: items.filter(item => ['spreadsheet', 'database', 'json'].includes(item.type))
+    };
+    
+    return {
+      ...clusters,
+      dominant: Object.entries(clusters).reduce((a, b) => 
+        clusters[a[0]].length > clusters[b[0]].length ? a : b
+      )[0]
+    };
+  }
+
+  detectNarrativeStructure(items) {
+    // Detect if items follow a narrative/sequential pattern
+    const sequentialIndicators = [
+      'intro', 'introduction', 'chapter', 'part', 'section',
+      'conclusion', 'summary', 'finale', 'appendix'
+    ];
+    
+    const hasSequentialNames = items.some(item => 
+      sequentialIndicators.some(indicator => 
+        item.name.toLowerCase().includes(indicator)
+      )
+    );
+    
+    const hasNumberedFiles = items.some(item => /\d+/.test(item.name));
+    
+    return {
+      isSequential: hasSequentialNames || hasNumberedFiles,
+      hasIntroduction: items.some(item => 
+        ['intro', 'introduction', 'overview'].some(keyword => 
+          item.name.toLowerCase().includes(keyword)
+        )
+      ),
+      hasConclusion: items.some(item => 
+        ['conclusion', 'summary', 'finale'].some(keyword => 
+          item.name.toLowerCase().includes(keyword)
+        )
+      ),
+      structure: this.identifyStructurePattern(items)
+    };
+  }
+
+  identifyStructurePattern(items) {
+    const patterns = {
+      'academic': /^(abstract|introduction|methods|results|discussion|conclusion)/i,
+      'portfolio': /^(about|work|projects|contact)/i,
+      'presentation': /^(slide|section|chapter)/i,
+      'report': /^(executive|summary|analysis|recommendations)/i
+    };
+    
+    for (const [patternName, regex] of Object.entries(patterns)) {
+      if (items.some(item => regex.test(item.name))) {
+        return patternName;
+      }
+    }
+    
+    return 'freeform';
+  }
+
+  analyzeVisualHierarchy(items) {
+    const heroItems = items.filter(item => item.role === 'hero');
+    const featuredItems = items.filter(item => item.role === 'featured');
+    const supportingItems = items.filter(item => item.role === 'supporting');
+    
+    return {
+      hasHero: heroItems.length > 0,
+      hasFeatured: featuredItems.length > 0,
+      hierarchyDepth: Math.max(
+        heroItems.length > 0 ? 1 : 0,
+        featuredItems.length > 0 ? 2 : 0,
+        supportingItems.length > 0 ? 3 : 0
+      ) || 1,
+      isFlat: heroItems.length === 0 && featuredItems.length === 0,
+      dominantRole: this.findDominantRole(items)
+    };
+  }
+
+  findDominantRole(items) {
+    const roleCounts = items.reduce((acc, item) => {
+      acc[item.role || 'default'] = (acc[item.role || 'default'] || 0) + 1;
+      return acc;
+    }, {});
+    
+    return Object.entries(roleCounts).reduce((a, b) => 
+      roleCounts[a[0]] > roleCounts[b[0]] ? a : b
+    )[0];
+  }
+
+  classifySubmissionIntent(items) {
+    const intentSignals = {
+      'portfolio': ['portfolio', 'work', 'project', 'design', 'creative'],
+      'academic': ['paper', 'thesis', 'research', 'study', 'analysis'],
+      'business': ['proposal', 'report', 'presentation', 'brief', 'pitch'],
+      'legal': ['contract', 'agreement', 'brief', 'filing', 'document'],
+      'creative': ['art', 'design', 'creative', 'concept', 'inspiration'],
+      'technical': ['code', 'documentation', 'spec', 'manual', 'guide']
+    };
+    
+    const scores = {};
+    
+    for (const [intent, keywords] of Object.entries(intentSignals)) {
+      scores[intent] = items.reduce((score, item) => {
+        const nameMatch = keywords.some(keyword => 
+          item.name.toLowerCase().includes(keyword)
+        );
+        const pathMatch = keywords.some(keyword => 
+          (item.path || '').toLowerCase().includes(keyword)
+        );
+        
+        return score + (nameMatch ? 2 : 0) + (pathMatch ? 1 : 0);
+      }, 0);
+    }
+    
+    const topIntent = Object.entries(scores).reduce((a, b) => 
+      scores[a[0]] > scores[b[0]] ? a : b
+    );
+    
+    return {
+      primary: topIntent[0],
+      confidence: topIntent[1] / items.length,
+      scores
+    };
+  }
+
+  async scoreAllAlgorithms(contentAnalysis, userContext, terminalConstraints) {
+    const algorithms = ['magazine', 'portfolio', 'academic', 'presentation', 'gallery'];
+    const scores = [];
+    
+    for (const algorithmName of algorithms) {
+      const score = await this.scoreAlgorithm(
+        algorithmName, 
+        contentAnalysis, 
+        userContext, 
+        terminalConstraints
+      );
+      scores.push({ name: algorithmName, ...score });
+    }
+    
+    return scores.sort((a, b) => b.totalScore - a.totalScore);
+  }
+
+  async scoreAlgorithm(algorithmName, contentAnalysis, userContext, terminalConstraints) {
+    const scoringRules = {
+      'magazine': {
+        contentTypes: { image: 0.3, text: 0.4, document: 0.2 },
+        narrativeStructure: { sequential: 0.8, freeform: 0.9 },
+        visualHierarchy: { hasHero: 0.7, isFlat: 0.3 },
+        submissionIntent: { creative: 0.8, business: 0.6, academic: 0.4 }
+      },
+      'portfolio': {
+        contentTypes: { image: 0.8, text: 0.2, document: 0.3 },
+        narrativeStructure: { sequential: 0.6, freeform: 0.8 },
+        visualHierarchy: { hasHero: 0.9, isFlat: 0.2 },
+        submissionIntent: { creative: 0.9, portfolio: 0.9, business: 0.5 }
+      },
+      'academic': {
+        contentTypes: { document: 0.8, text: 0.7, image: 0.3 },
+        narrativeStructure: { sequential: 0.9, freeform: 0.3 },
+        visualHierarchy: { hasHero: 0.3, isFlat: 0.7 },
+        submissionIntent: { academic: 0.9, technical: 0.7, business: 0.5 }
+      },
+      'presentation': {
+        contentTypes: { image: 0.6, text: 0.5, document: 0.4 },
+        narrativeStructure: { sequential: 0.8, freeform: 0.4 },
+        visualHierarchy: { hasHero: 0.6, isFlat: 0.4 },
+        submissionIntent: { business: 0.8, academic: 0.6, creative: 0.5 }
+      },
+      'gallery': {
+        contentTypes: { image: 0.9, video: 0.8, text: 0.2 },
+        narrativeStructure: { sequential: 0.4, freeform: 0.9 },
+        visualHierarchy: { hasHero: 0.5, isFlat: 0.8 },
+        submissionIntent: { creative: 0.9, portfolio: 0.8, business: 0.3 }
+      }
+    };
+    
+    const rules = scoringRules[algorithmName];
+    if (!rules) return { totalScore: 0, breakdown: {} };
+    
+    const breakdown = {};
+    
+    // Content type scoring
+    const contentTypeScore = this.calculateContentTypeScore(contentAnalysis, rules.contentTypes);
+    breakdown.contentTypes = contentTypeScore;
+    
+    // Narrative structure scoring
+    const narrativeScore = this.calculateNarrativeScore(contentAnalysis, rules.narrativeStructure);
+    breakdown.narrative = narrativeScore;
+    
+    // Visual hierarchy scoring
+    const hierarchyScore = this.calculateHierarchyScore(contentAnalysis, rules.visualHierarchy);
+    breakdown.hierarchy = hierarchyScore;
+    
+    // Submission intent scoring
+    const intentScore = this.calculateIntentScore(contentAnalysis, rules.submissionIntent);
+    breakdown.intent = intentScore;
+    
+    // Terminal constraints adjustment
+    const constraintAdjustment = this.calculateConstraintAdjustment(algorithmName, terminalConstraints);
+    breakdown.constraints = constraintAdjustment;
+    
+    const totalScore = (
+      contentTypeScore * 0.3 +
+      narrativeScore * 0.2 +
+      hierarchyScore * 0.2 +
+      intentScore * 0.2 +
+      constraintAdjustment * 0.1
+    );
+    
+    return { totalScore, breakdown };
+  }
+
+  calculateContentTypeScore(analysis, rules) {
+    const { contentClusters } = analysis;
+    const totalItems = analysis.totalItems;
+    
+    let score = 0;
+    for (const [type, weight] of Object.entries(rules)) {
+      const typeCount = contentClusters[type]?.length || 0;
+      const typeRatio = typeCount / totalItems;
+      score += typeRatio * weight;
+    }
+    
+    return Math.min(score, 1);
+  }
+
+  calculateNarrativeScore(analysis, rules) {
+    const { narrativeStructure } = analysis;
+    const structureType = narrativeStructure.isSequential ? 'sequential' : 'freeform';
+    return rules[structureType] || 0.5;
+  }
+
+  calculateHierarchyScore(analysis, rules) {
+    const { visualHierarchy } = analysis;
+    
+    if (visualHierarchy.hasHero && rules.hasHero) {
+      return rules.hasHero;
+    }
+    
+    if (visualHierarchy.isFlat && rules.isFlat) {
+      return rules.isFlat;
+    }
+    
+    return 0.5; // Default score
+  }
+
+  calculateIntentScore(analysis, rules) {
+    const { submissionIntent } = analysis;
+    return rules[submissionIntent.primary] || 0.5;
+  }
+
+  calculateConstraintAdjustment(algorithmName, constraints) {
+    const { width, capabilities } = constraints;
+    
+    let adjustment = 1.0;
+    
+    // Adjust for narrow terminals
+    if (width < 100) {
+      const narrowFriendly = ['academic', 'presentation'];
+      adjustment *= narrowFriendly.includes(algorithmName) ? 1.1 : 0.8;
+    }
+    
+    // Adjust for limited capabilities
+    if (!capabilities.hasColor) {
+      const monoFriendly = ['academic', 'presentation'];
+      adjustment *= monoFriendly.includes(algorithmName) ? 1.05 : 0.95;
+    }
+    
+    return adjustment;
+  }
+
+  selectBestAlgorithm(algorithmScores, userPreferences) {
+    // Allow user preference override with confidence threshold
+    if (userPreferences.algorithm) {
+      const userChoice = algorithmScores.find(a => a.name === userPreferences.algorithm);
+      if (userChoice && userChoice.totalScore > 0.3) {
+        return { ...userChoice, confidence: 'user-specified' };
+      }
+    }
+    
+    const best = algorithmScores[0];
+    const confidence = this.calculateConfidence(best, algorithmScores);
+    
+    return { ...best, confidence };
+  }
+
+  calculateConfidence(best, allScores) {
+    if (allScores.length < 2) return 'high';
+    
+    const second = allScores[1];
+    const gap = best.totalScore - second.totalScore;
+    
+    if (gap > 0.3) return 'high';
+    if (gap > 0.15) return 'medium';
+    return 'low';
+  }
+
+  analyzeContent(items) {
+    const analysis = {
+      hasHeroImage: items.some(item => item.role === 'hero'),
+      imageRatio: items.filter(item => item.type === 'image').length / items.length,
+      textRatio: items.filter(item => item.type === 'text').length / items.length,
+      documentRatio: items.filter(item => item.type === 'document').length / items.length,
+      totalItems: items.length,
+      averageFileSize: this.calculateAverageFileSize(items),
+      contentComplexity: this.calculateContentComplexity(items)
+    };
+
+    return analysis;
+  }
+
+  // === MISSING HELPER METHODS ===
+
+  async analyzeContentCharacteristics(items) {
+    // Analyze content characteristics for layout optimization
+    const analysis = {
+      hasHeroImage: items.some(item => item.role === 'hero'),
+      imageRatio: items.filter(item => item.type === 'image').length / items.length,
+      textRatio: items.filter(item => item.type === 'text').length / items.length,
+      documentRatio: items.filter(item => item.type === 'document').length / items.length,
+      totalItems: items.length,
+      averageFileSize: this.calculateAverageFileSize(items),
+      contentComplexity: this.calculateContentComplexity(items),
+      contentTypes: [...new Set(items.map(item => item.type))],
+      roles: [...new Set(items.map(item => item.role))],
+      hasLargeFiles: items.some(item => this.parseFileSize(item.size) > 1024 * 1024), // > 1MB
+      hasSmallFiles: items.some(item => this.parseFileSize(item.size) < 1024), // < 1KB
+      layoutSuggestion: this.suggestLayoutType(items)
+    };
+
+    return analysis;
+  }
+
+  parseFileSize(sizeStr) {
+    if (!sizeStr) return 0;
+    const match = sizeStr.match(/(\d+(?:\.\d+)?)\s*([A-Za-z]+)/);
+    if (!match) return 0;
+    
+    const value = parseFloat(match[1]);
+    const unit = match[2].toLowerCase();
+    
+    const multipliers = {
+      'b': 1,
+      'kb': 1024,
+      'mb': 1024 * 1024,
+      'gb': 1024 * 1024 * 1024
+    };
+    
+    return value * (multipliers[unit] || 1);
+  }
+
+  suggestLayoutType(items) {
+    const imageCount = items.filter(item => item.type === 'image').length;
+    const textCount = items.filter(item => item.type === 'text').length;
+    const totalCount = items.length;
+    
+    if (imageCount > totalCount * 0.6) return 'gallery';
+    if (textCount > totalCount * 0.6) return 'document';
+    if (totalCount <= 3) return 'simple';
+    return 'mixed';
+  }
+
+  async selectLayoutStrategy(contentAnalysis, options) {
+    // Select optimal layout strategy based on content analysis
+    const strategy = {
+      type: contentAnalysis.layoutSuggestion,
+      algorithm: options.algorithm || 'flexbox',
+      responsive: options.responsive !== false,
+      optimize: options.optimize !== false,
+      columns: this.calculateOptimalColumns(contentAnalysis),
+      spacing: this.calculateOptimalSpacing(contentAnalysis),
+      priority: this.calculateContentPriority(contentAnalysis)
+    };
+    
+    return strategy;
+  }
+
+  calculateOptimalColumns(contentAnalysis) {
+    const { totalItems, imageRatio, textRatio } = contentAnalysis;
+    
+    if (totalItems <= 2) return 1;
+    if (imageRatio > 0.6) return Math.min(3, Math.ceil(totalItems / 2));
+    if (textRatio > 0.6) return 1;
+    return Math.min(2, Math.ceil(totalItems / 3));
+  }
+
+  calculateOptimalSpacing(contentAnalysis) {
+    const { hasLargeFiles, totalItems } = contentAnalysis;
+    
+    if (hasLargeFiles) return 'generous';
+    if (totalItems > 6) return 'compact';
+    return 'standard';
+  }
+
+  calculateContentPriority(contentAnalysis) {
+    const priorities = [];
+    
+    if (contentAnalysis.hasHeroImage) {
+      priorities.push({ type: 'hero', weight: 1.0 });
+    }
+    
+    contentAnalysis.roles.forEach(role => {
+      const weights = {
+        'hero': 1.0,
+        'about': 0.8,
+        'gallery': 0.7,
+        'document': 0.6,
+        'content': 0.5,
+        'media': 0.4
+      };
+      
+      priorities.push({ 
+        type: role, 
+        weight: weights[role] || 0.5 
+      });
+    });
+    
+    return priorities;
+  }
+
+  async calculateResponsiveGrid(items, strategy, options) {
+    // Calculate responsive grid layout using strategy
+    const terminalDimensions = this.detectTerminalDimensions();
+    
+    const grid = {
+      columns: strategy.columns,
+      rows: Math.ceil(items.length / strategy.columns),
+      cellWidth: Math.floor(terminalDimensions.width / strategy.columns),
+      cellHeight: Math.floor(terminalDimensions.height / Math.ceil(items.length / strategy.columns)),
+      spacing: strategy.spacing,
+      items: items.map((item, index) => ({
+        ...item,
+        gridPosition: {
+          column: index % strategy.columns,
+          row: Math.floor(index / strategy.columns)
+        },
+        dimensions: {
+          width: Math.floor(terminalDimensions.width / strategy.columns),
+          height: this.calculateItemHeight(item, strategy)
+        }
+      }))
+    };
+    
+    return grid;
+  }
+
+  calculateItemHeight(item, strategy) {
+    const baseHeight = 3; // Minimum height for terminal display
+    
+    const heightModifiers = {
+      'image': 8,
+      'text': 4,
+      'document': 6,
+      'audio': 2,
+      'video': 8,
+      'file': 3
+    };
+    
+    return heightModifiers[item.type] || baseHeight;
+  }
+
+  analyzeUserContext(userPreferences) {
+    return {
+      hasExplicitAlgorithm: !!userPreferences.algorithm,
+      preferredTheme: userPreferences.theme,
+      experienceLevel: userPreferences.experience || 'intermediate',
+      customizations: userPreferences.customizations || {}
+    };
+  }
+
+  analyzeTerminalConstraints(dimensions) {
+    const terminalInfo = this.detectTerminalDimensions();
+    return {
+      width: dimensions.width || terminalInfo.width,
+      height: dimensions.height || terminalInfo.height,
+      capabilities: terminalInfo.capabilities
+    };
+  }
+
+  mapContentRelationships(items) {
+    // Simple relationship mapping based on naming patterns
+    const relationships = [];
+    
+    items.forEach((item, index) => {
+      // Check for sequential relationships
+      const sequentialMatch = item.name.match(/(\d+)/);
+      if (sequentialMatch) {
+        const number = parseInt(sequentialMatch[1]);
+        const nextItem = items.find(other => 
+          other.name.includes(String(number + 1))
+        );
+        if (nextItem) {
+          relationships.push({
+            type: 'sequential',
+            from: item.name,
+            to: nextItem.name,
+            strength: 0.8
+          });
+        }
+      }
+      
+      // Check for complementary relationships
+      const complementaryPairs = [
+        ['before', 'after'],
+        ['intro', 'conclusion'],
+        ['overview', 'detail'],
+        ['draft', 'final']
+      ];
+      
+      complementaryPairs.forEach(([first, second]) => {
+        if (item.name.toLowerCase().includes(first)) {
+          const complement = items.find(other => 
+            other.name.toLowerCase().includes(second)
+          );
+          if (complement) {
+            relationships.push({
+              type: 'complementary',
+              from: item.name,
+              to: complement.name,
+              strength: 0.6
+            });
+          }
+        }
+      });
+    });
+    
+    return relationships;
+  }
+
+  async assessContentQuality(items) {
+    // Basic quality assessment
+    const qualityMetrics = {
+      hasDescriptiveNames: items.every(item => 
+        item.name.length > 5 && !/^untitled/i.test(item.name)
+      ),
+      hasVariedContent: this.calculateTypeDistribution(items).length > 1,
+      hasAppropriateSize: items.every(item => 
+        (item.sizeBytes || 0) > 0 && (item.sizeBytes || 0) < 100 * 1024 * 1024 // Less than 100MB
+      ),
+      hasStructure: items.some(item => 
+        ['readme', 'index', 'main', 'intro'].some(keyword => 
+          item.name.toLowerCase().includes(keyword)
+        )
+      )
+    };
+    
+    const score = Object.values(qualityMetrics).filter(Boolean).length / 
+                  Object.keys(qualityMetrics).length;
+    
+    return {
+      score,
+      metrics: qualityMetrics,
+      suggestions: this.generateQualityImprovements(qualityMetrics)
+    };
+  }
+
+  generateQualityImprovements(metrics) {
+    const suggestions = [];
+    
+    if (!metrics.hasDescriptiveNames) {
+      suggestions.push('Consider using more descriptive file names');
+    }
+    
+    if (!metrics.hasVariedContent) {
+      suggestions.push('Add variety to content types for better presentation');
+    }
+    
+    if (!metrics.hasStructure) {
+      suggestions.push('Include an introduction or overview file');
+    }
+    
+    return suggestions;
+  }
+
+  suggestAlgorithm(analysis, preferences = {}) {
+    // User preference takes priority
+    if (preferences.algorithm) {
+      return preferences.algorithm;
+    }
+
+    // Content-based algorithm selection
+    if (analysis.imageRatio > 0.6) {
+      return 'gallery';
+    }
+    
+    if (analysis.documentRatio > 0.5) {
+      return 'academic';
+    }
+    
+    if (analysis.hasHeroImage && analysis.totalItems <= 8) {
+      return 'portfolio';
+    }
+    
+    if (analysis.textRatio > 0.4) {
+      return 'magazine';
+    }
+    
+    return 'presentation';
+  }
+
+  // === LAYOUT OPTIMIZATION ===
+
+  optimizeLayout(layout, dimensions) {
+    // Ensure layout has the expected structure
+    if (!layout.children && layout.items) {
+      layout.children = layout.items;
+    }
+    
+    // Skip optimization if no children
+    if (!layout.children || layout.children.length === 0) {
+      return layout;
+    }
+    
+    // Remove overlapping elements
+    this.resolveOverlaps(layout);
+    
+    // Optimize white space
+    this.optimizeWhitespace(layout, dimensions);
+    
+    // Enhance visual hierarchy
+    this.enhanceVisualHierarchy(layout);
+    
+    // Improve accessibility
+    this.optimizeAccessibility(layout);
+    
+    return layout;
+  }
+
+  resolveOverlaps(layout) {
+    const elements = layout.children;
+    
+    for (let i = 0; i < elements.length; i++) {
+      for (let j = i + 1; j < elements.length; j++) {
+        if (this.elementsOverlap(elements[i], elements[j])) {
+          this.adjustElementPosition(elements[j], elements[i]);
+        }
+      }
+    }
+  }
+
+  optimizeWhitespace(layout, dimensions) {
+    const optimalWhitespace = dimensions.width * 0.1; // 10% of width
+    
+    layout.children.forEach((element, index) => {
+      const nextElement = layout.children[index + 1];
+      
+      if (nextElement) {
+        const currentSpacing = nextElement.y - (element.y + element.height);
+        
+        if (currentSpacing < optimalWhitespace * 0.5) {
+          // Too cramped - increase spacing
+          nextElement.y = element.y + element.height + optimalWhitespace;
+        } else if (currentSpacing > optimalWhitespace * 2) {
+          // Too much space - reduce spacing
+          nextElement.y = element.y + element.height + optimalWhitespace;
+        }
+      }
+    });
+  }
+
+  enhanceVisualHierarchy(layout) {
+    // Sort elements by importance
+    const sortedElements = [...layout.children].sort((a, b) => {
+      const importanceA = this.calculateElementImportance(a);
+      const importanceB = this.calculateElementImportance(b);
+      return importanceB - importanceA;
+    });
+
+    // Adjust sizes based on hierarchy
+    sortedElements.forEach((element, index) => {
+      const hierarchyLevel = index / sortedElements.length;
+      element.hierarchyLevel = hierarchyLevel;
+      element.visualWeight = 1 - hierarchyLevel * 0.3; // 30% reduction for lower hierarchy
+    });
+  }
+
+  calculateElementImportance(element) {
+    const roleWeights = {
+      'hero': 10,
+      'title': 8,
+      'featured': 6,
+      'content': 4,
+      'supporting': 2,
+      'metadata': 1
+    };
+
+    const typeWeights = {
+      'image': 3,
+      'video': 3,
+      'document': 2,
+      'text': 1,
+      'audio': 1
+    };
+
+    const roleWeight = roleWeights[element.role] || 3;
+    const typeWeight = typeWeights[element.type] || 1;
+    const sizeWeight = (element.width * element.height) / 10000;
+
+    return roleWeight + typeWeight + sizeWeight;
+  }
+
+  // === TRANSITION SYSTEM ===
+
+  generateTransitionRules(layouts) {
+    const transitions = {};
+    
+    const breakpointOrder = ['narrow', 'standard', 'wide', 'ultrawide'];
+    
+    for (let i = 0; i < breakpointOrder.length - 1; i++) {
+      const from = breakpointOrder[i];
+      const to = breakpointOrder[i + 1];
+      
+      transitions[`${from}-to-${to}`] = this.createTransitionRule(
+        layouts[from], 
+        layouts[to]
+      );
+    }
+    
+    return transitions;
+  }
+
+  createTransitionRule(fromLayout, toLayout) {
+    return {
+      duration: '0.3s',
+      easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+      properties: ['width', 'height', 'transform', 'opacity'],
+      keyframes: this.generateTransitionKeyframes(fromLayout, toLayout)
+    };
+  }
+
+  generateTransitionKeyframes(fromLayout, toLayout) {
+    const keyframes = [];
+    
+    // Match elements between layouts
+    const elementPairs = this.matchElementsBetweenLayouts(fromLayout, toLayout);
+    
+    elementPairs.forEach(pair => {
+      if (pair.from && pair.to) {
+        keyframes.push({
+          element: pair.from.name,
+          from: {
+            x: pair.from.x,
+            y: pair.from.y,
+            width: pair.from.width,
+            height: pair.from.height
+          },
+          to: {
+            x: pair.to.x,
+            y: pair.to.y,
+            width: pair.to.width,
+            height: pair.to.height
+          }
+        });
+      }
+    });
+    
+    return keyframes;
+  }
+
+  // === SMART CACHE MANAGEMENT ===
+
+  /**
+   * Generate content-aware cache key with semantic hashing
+   */
+  generateCacheKey(items, options) {
+    const startTime = Date.now();
+    
+    // Generate semantic fingerprint for content-aware caching
+    const contentFingerprint = this.generateContentFingerprint(items);
+    const layoutFingerprint = this.generateLayoutFingerprint(options);
+    const contextFingerprint = this.generateContextFingerprint();
+    
+    const cacheKey = `smart-layout-${contentFingerprint}-${layoutFingerprint}-${contextFingerprint}`;
+    
+    // Store cache metadata for smart invalidation
+    this.cacheMetadata.set(cacheKey, {
+      createdAt: Date.now(),
+      contentHash: contentFingerprint,
+      layoutHash: layoutFingerprint,
+      contextHash: contextFingerprint,
+      accessCount: 0,
+      lastAccessed: Date.now(),
+      computeTime: 0,
+      items: items.length,
+      complexity: this.calculateLayoutComplexity(items, options)
+    });
+    
+    this.cacheStats.totalCacheTime += Date.now() - startTime;
+    return cacheKey;
+  }
+
+  /**
+   * Generate semantic content fingerprint that detects meaningful changes
+   */
+  generateContentFingerprint(items) {
+    // Extract semantic properties that affect layout
+    const semanticData = items.map(item => ({
+      // Core layout properties
+      type: item.type,
+      size: item.size || item.width || item.height,
+      position: item.position,
+      flex: item.flex,
+      
+      // Content properties that affect layout
+      textLength: item.text ? item.text.length : 0,
+      hasChildren: !!(item.children && item.children.length),
+      childrenCount: item.children ? item.children.length : 0,
+      
+      // Visual properties affecting space
+      margin: item.margin,
+      padding: item.padding,
+      border: item.border,
+      
+      // Content category for layout strategy
+      category: this.categorizeContentForLayout(item)
+    }));
+    
+    return createHash('sha256')
+      .update(JSON.stringify(semanticData))
+      .digest('hex')
+      .substring(0, 16); // Short hash for performance
+  }
+
+  /**
+   * Generate layout configuration fingerprint
+   */
+  generateLayoutFingerprint(options) {
+    const layoutProperties = {
+      strategy: options.strategy,
+      breakpoint: options.breakpoint,
+      dimensions: options.dimensions,
+      responsive: options.responsive,
+      memoryOptimized: options.memoryOptimized,
+      terminalOptimized: options.terminalOptimized,
+      configOptimized: options.configOptimized
+    };
+    
+    return createHash('md5')
+      .update(JSON.stringify(layoutProperties))
+      .digest('hex')
+      .substring(0, 12);
+  }
+
+  /**
+   * Generate context fingerprint for environment-specific caching
+   */
+  generateContextFingerprint() {
+    const context = {
+      terminalSize: process.stdout.columns + 'x' + process.stdout.rows,
+      colorDepth: process.stdout.getColorDepth ? process.stdout.getColorDepth() : 8,
+      activeConfig: this.activeConfig ? 'optimized' : 'default',
+      memoryPressure: process.memoryUsage().heapUsed > 100 * 1024 * 1024 ? 'high' : 'normal'
+    };
+    
+    return createHash('md5')
+      .update(JSON.stringify(context))
+      .digest('hex')
+      .substring(0, 8);
+  }
+
+  /**
+   * Categorize content for layout strategy selection
+   */
+  categorizeContentForLayout(item) {
+    if (item.type === 'image') return 'visual';
+    if (item.type === 'text' && item.text && item.text.length > 500) return 'long-text';
+    if (item.type === 'text') return 'short-text';
+    if (item.children && item.children.length > 10) return 'complex-container';
+    if (item.children) return 'container';
+    return 'simple';
+  }
+
+  /**
+   * Calculate layout complexity score for cache optimization
+   */
+  calculateLayoutComplexity(items, options) {
+    let complexity = 0;
+    
+    // Base complexity from item count
+    complexity += items.length * 0.5;
+    
+    // Additional complexity from nesting
+    items.forEach(item => {
+      if (item.children) {
+        complexity += item.children.length * 0.3;
+      }
+      if (item.type === 'container') complexity += 2;
+      if (item.flex || item.position) complexity += 1;
+    });
+    
+    // Options complexity
+    if (options.responsive) complexity += 3;
+    if (options.strategy && options.strategy !== 'simple') complexity += 2;
+    if (options.memoryOptimized) complexity += 1;
+    
+    return Math.round(complexity * 10) / 10; // Round to 1 decimal
+  }
+
+  /**
+   * Smart cache retrieval with performance tracking
+   */
+  getFromSmartCache(cacheKey) {
+    const startTime = Date.now();
+    const cached = this.cache.get(cacheKey);
+    const cacheTime = Date.now() - startTime;
+    
+    if (cached) {
+      this.cacheStats.hits++;
+      this.cacheStats.totalCacheTime += cacheTime;
+      
+      // Update cache metadata
+      const metadata = this.cacheMetadata.get(cacheKey);
+      if (metadata) {
+        metadata.accessCount++;
+        metadata.lastAccessed = Date.now();
+      }
+      
+      this.emit('cache-hit', { 
+        cacheKey, 
+        cacheTime,
+        complexity: metadata?.complexity || 0
+      });
+      
+      return cached;
+    } else {
+      this.cacheStats.misses++;
+      this.emit('cache-miss', { cacheKey });
+      return null;
+    }
+  }
+
+  /**
+   * Smart cache storage with metadata tracking
+   */
+  setInSmartCache(cacheKey, layout, computeTime) {
+    const metadata = this.cacheMetadata.get(cacheKey);
+    if (metadata) {
+      metadata.computeTime = computeTime;
+    }
+    
+    this.cache.set(cacheKey, {
+      layout,
+      metadata: {
+        ...metadata,
+        cachedAt: Date.now(),
+        computeTime
+      }
+    });
+    
+    this.cacheStats.totalComputeTime += computeTime;
+    
+    this.emit('cache-stored', { 
+      cacheKey, 
+      computeTime,
+      complexity: metadata?.complexity || 0
+    });
+  }
+
+  /**
+   * Smart cache invalidation based on content changes
+   */
+  invalidateSmartCache(contentChanges = {}) {
+    const startTime = Date.now();
+    let invalidatedCount = 0;
+    
+    console.log(chalk.blue('🧹 Running smart cache invalidation...'));
+    
+    // Analyze which cache entries should be invalidated
+    for (const [cacheKey, metadata] of this.cacheMetadata.entries()) {
+      if (this.shouldInvalidateCacheEntry(metadata, contentChanges)) {
+        this.cache.delete(cacheKey);
+        this.cacheMetadata.delete(cacheKey);
+        invalidatedCount++;
+      }
+    }
+    
+    // Clean up stale fingerprints
+    this.cleanupStaleFingerprints();
+    
+    this.cacheStats.smartInvalidations++;
+    this.cacheStats.invalidations += invalidatedCount;
+    
+    const invalidationTime = Date.now() - startTime;
+    
+    console.log(chalk.green(`✅ Smart invalidation complete: ${invalidatedCount} entries invalidated in ${invalidationTime}ms`));
+    
+    this.emit('smart-cache-invalidated', {
+      invalidatedCount,
+      invalidationTime,
+      reason: contentChanges
+    });
+    
+    return invalidatedCount;
+  }
+
+  /**
+   * Determine if cache entry should be invalidated based on changes
+   */
+  shouldInvalidateCacheEntry(metadata, contentChanges) {
+    // Always invalidate very old entries
+    const maxAge = 2 * 60 * 60 * 1000; // 2 hours
+    if (Date.now() - metadata.createdAt > maxAge) {
+      return true;
+    }
+    
+    // Invalidate unused entries
+    const maxIdleTime = 30 * 60 * 1000; // 30 minutes
+    if (Date.now() - metadata.lastAccessed > maxIdleTime && metadata.accessCount < 2) {
+      return true;
+    }
+    
+    // Content-based invalidation
+    if (contentChanges.contentTypes && this.contentTypesChanged(metadata, contentChanges.contentTypes)) {
+      return true;
+    }
+    
+    if (contentChanges.layoutStrategy && this.layoutStrategyChanged(metadata, contentChanges.layoutStrategy)) {
+      return true;
+    }
+    
+    if (contentChanges.terminalSize && this.terminalSizeChanged(metadata, contentChanges.terminalSize)) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if content types have changed significantly
+   */
+  contentTypesChanged(metadata, newContentTypes) {
+    // Simple heuristic: if content types changed significantly, invalidate
+    return newContentTypes && newContentTypes.length > 0;
+  }
+
+  /**
+   * Check if layout strategy changed
+   */
+  layoutStrategyChanged(metadata, newStrategy) {
+    return newStrategy && metadata.layoutHash !== this.generateLayoutFingerprint({ strategy: newStrategy });
+  }
+
+  /**
+   * Check if terminal size changed significantly
+   */
+  terminalSizeChanged(metadata, newSize) {
+    if (!newSize) return false;
+    
+    const currentContext = this.generateContextFingerprint();
+    return metadata.contextHash !== currentContext;
+  }
+
+  /**
+   * Clean up stale content fingerprints
+   */
+  cleanupStaleFingerprints() {
+    const maxAge = 60 * 60 * 1000; // 1 hour
+    const now = Date.now();
+    
+    for (const [fingerprint, timestamp] of this.contentFingerprints.entries()) {
+      if (now - timestamp > maxAge) {
+        this.contentFingerprints.delete(fingerprint);
+      }
+    }
+  }
+
+  /**
+   * Cache warming strategy for common layouts
+   */
+  async warmCache(items, strategies = ['magazine', 'portfolio', 'academic']) {
+    this.cacheStats.warmingOperations++;
+    
+    console.log(chalk.blue(`🔥 Warming cache for ${strategies.length} strategies...`));
+    
+    const warmingPromises = strategies.map(async strategy => {
+      try {
+        const options = { strategy, cacheWarming: true };
+        const cacheKey = this.generateCacheKey(items, options);
+        
+        if (!this.cache.has(cacheKey)) {
+          await this.generateResponsiveLayout(items, options);
+        }
+      } catch (error) {
+        console.warn(chalk.yellow(`⚠️  Cache warming failed for strategy ${strategy}:`, error.message));
+      }
+    });
+    
+    await Promise.allSettled(warmingPromises);
+    
+    console.log(chalk.green('✅ Cache warming complete'));
+    this.emit('cache-warmed', { strategies, itemCount: items.length });
+  }
+
+  /**
+   * Get comprehensive cache performance statistics
+   */
+  getCachePerformanceStats() {
+    const hitRate = this.cacheStats.hits / (this.cacheStats.hits + this.cacheStats.misses);
+    const avgCacheTime = this.cacheStats.totalCacheTime / Math.max(this.cacheStats.hits, 1);
+    const avgComputeTime = this.cacheStats.totalComputeTime / Math.max(this.cacheStats.misses, 1);
+    
+    return {
+      ...this.cacheStats,
+      hitRate: isNaN(hitRate) ? 0 : hitRate,
+      averageCacheTime: isNaN(avgCacheTime) ? 0 : avgCacheTime,
+      averageComputeTime: isNaN(avgComputeTime) ? 0 : avgComputeTime,
+      cacheSize: this.cache.size,
+      maxCacheSize: this.cache.max,
+      cacheEfficiency: avgCacheTime > 0 ? avgComputeTime / avgCacheTime : 0,
+      metadataEntries: this.cacheMetadata.size
+    };
+  }
+
+  /**
+   * Print detailed cache analysis
+   */
+  printCacheAnalysis() {
+    const stats = this.getCachePerformanceStats();
+    
+    console.log(chalk.blue('\n📊 Smart Cache Performance Analysis'));
+    console.log(chalk.blue('===================================='));
+    
+    console.log(`Cache Hit Rate: ${(stats.hitRate * 100).toFixed(1)}%`);
+    console.log(`Total Hits: ${stats.hits}`);
+    console.log(`Total Misses: ${stats.misses}`);
+    console.log(`Cache Size: ${stats.cacheSize}/${stats.maxCacheSize}`);
+    
+    console.log(chalk.cyan('\n⚡ Performance Metrics:'));
+    console.log(`Average Cache Retrieval: ${stats.averageCacheTime.toFixed(2)}ms`);
+    console.log(`Average Compute Time: ${stats.averageComputeTime.toFixed(2)}ms`);
+    console.log(`Cache Efficiency: ${stats.cacheEfficiency.toFixed(2)}x faster`);
+    
+    console.log(chalk.cyan('\n🧠 Smart Invalidation:'));
+    console.log(`Smart Invalidations: ${stats.smartInvalidations}`);
+    console.log(`Total Invalidations: ${stats.invalidations}`);
+    console.log(`Cache Warming Operations: ${stats.warmingOperations}`);
+    
+    // Cache optimization recommendations
+    const recommendations = this.generateCacheRecommendations(stats);
+    if (recommendations.length > 0) {
+      console.log(chalk.yellow('\n💡 Cache Optimization Recommendations:'));
+      recommendations.forEach(rec => {
+        console.log(`  ${rec}`);
+      });
+    }
+    
+    console.log(chalk.green('\n✅ Cache analysis complete'));
+  }
+
+  /**
+   * Generate cache optimization recommendations
+   */
+  generateCacheRecommendations(stats) {
+    const recommendations = [];
+    
+    if (stats.hitRate < 0.7) {
+      recommendations.push('Consider increasing cache size or implementing cache warming');
+    }
+    
+    if (stats.cacheEfficiency < 5) {
+      recommendations.push('Cache retrieval is slow, consider optimizing cache key generation');
+    }
+    
+    if (stats.smartInvalidations < stats.invalidations * 0.5) {
+      recommendations.push('Smart invalidation could be more aggressive to improve cache freshness');
+    }
+    
+    if (stats.cacheSize > stats.maxCacheSize * 0.9) {
+      recommendations.push('Cache is near capacity, consider increasing max size');
+    }
+    
+    if (stats.averageComputeTime > 100) {
+      recommendations.push('Layout calculations are expensive, consider optimizing algorithms');
+    }
+    
+    return recommendations;
+  }
+
+  /**
+   * Invalidate cache with pattern (legacy compatibility)
+   */
+  invalidateCache(pattern) {
+    if (pattern) {
+      // Use smart invalidation for pattern-based invalidation
+      return this.invalidateSmartCache({ pattern });
+    } else {
+      // Clear entire cache
+      this.cache.clear();
+      this.cacheMetadata.clear();
+      this.contentFingerprints.clear();
+      this.cacheStats.invalidations++;
+      
+      console.log(chalk.yellow('🧹 Cache completely cleared'));
+    }
+  }
+
+  /**
+   * Dispose of configuration optimizer resources
+   */
+  async dispose() {
+    console.log(chalk.yellow('🧹 Disposing Enhanced Yoga Layout Engine...'));
+    
+    // Dispose configuration optimizer
+    if (this.configOptimizer) {
+      this.configOptimizer.dispose();
+    }
+    
+    // Dispose memory optimizer
+    if (this.memoryOptimizer) {
+      this.memoryOptimizer.dispose();
+    }
+    
+    // Dispose terminal detector
+    if (this.terminalDetector) {
+      this.terminalDetector.dispose();
+    }
+    
+    // Clear caches and active operations
+    this.cache.clear();
+    this.cacheMetadata.clear();
+    this.contentFingerprints.clear();
+    this.activeOperations.clear();
+    
+    // Reset state
+    this.isInitialized = false;
+    this.activeConfig = null;
+    this.configHistory = [];
+    this.performanceBaseline = null;
+    
+    // Reset terminal state
+    this.currentTerminalState = null;
+    this.adaptiveScaling = null;
+    this.layoutBreakpoint = 'md';
+    
+    // Reset cache statistics
+    this.cacheStats = {
+      hits: 0,
+      misses: 0,
+      invalidations: 0,
+      warmingOperations: 0,
+      smartInvalidations: 0,
+      totalCacheTime: 0,
+      totalComputeTime: 0
+    };
+    
+    console.log(chalk.green('✅ Enhanced Yoga Layout Engine disposed with comprehensive cleanup'));
+  }
+
+  // === UTILITY METHODS ===
+
+  calculatePadding(width) {
+    if (width < 400) return 10;
+    if (width < 800) return 20;
+    if (width < 1200) return 30;
+    return 40;
+  }
+
+  calculateAverageFileSize(items) {
+    const totalSize = items.reduce((sum, item) => sum + (item.sizeBytes || 0), 0);
+    return totalSize / items.length;
+  }
+
+  calculateContentComplexity(items) {
+    const typeComplexity = {
+      'video': 3,
+      'image': 2,
+      'document': 2,
+      'text': 1,
+      'audio': 1
+    };
+
+    const totalComplexity = items.reduce((sum, item) => {
+      return sum + (typeComplexity[item.type] || 1);
+    }, 0);
+
+    return totalComplexity / items.length;
+  }
+
+  elementsOverlap(a, b) {
+    return !(
+      a.x + a.width <= b.x ||
+      b.x + b.width <= a.x ||
+      a.y + a.height <= b.y ||
+      b.y + b.height <= a.y
+    );
+  }
+
+  adjustElementPosition(element, obstacle) {
+    // Move element below obstacle
+    element.y = obstacle.y + obstacle.height + 20;
+  }
+
+  extractResponsiveLayoutInfo(rootNode, layoutNodes, dimensions) {
+    return {
+      type: 'responsive',
+      breakpoint: this.identifyBreakpoint(dimensions),
+      width: rootNode.getComputedWidth(),
+      height: rootNode.getComputedHeight(),
+      children: layoutNodes.map((node, index) => ({
+        name: node.item.name,
+        type: node.item.type,
+        role: node.item.role,
+        x: node.node.getComputedLeft(),
+        y: node.node.getComputedTop(),
+        width: node.node.getComputedWidth(),
+        height: node.node.getComputedHeight(),
+        hierarchyLevel: index / layoutNodes.length,
+        visualWeight: 1 - (index / layoutNodes.length) * 0.3
+      }))
+    };
+  }
+
+  identifyBreakpoint(dimensions) {
+    const { width } = dimensions;
+    
+    if (width <= 90) return 'narrow';      // Small terminal windows
+    if (width <= 140) return 'standard';   // Standard terminal
+    if (width <= 180) return 'wide';       // Wide terminal
+    return 'ultrawide';                    // Ultra-wide displays
+  }
+
+  // === LEGACY TERMINAL DIMENSION DETECTION (ENHANCED) ===
+
+  detectTerminalDimensions() {
+    // Use advanced terminal detector if available, fallback to basic detection
+    if (this.terminalDetector) {
+      const terminalInfo = this.getCurrentTerminalInfo();
+      return {
+        width: terminalInfo.dimensions.width,
+        height: terminalInfo.dimensions.height,
+        breakpoint: terminalInfo.dimensions.breakpoint,
+        capabilities: this.convertCapabilitiesToLegacyFormat(terminalInfo.capabilities),
+        category: terminalInfo.dimensions.category,
+        scaling: terminalInfo.scaling,
+        enhanced: true
+      };
+    }
+    
+    // Fallback to basic detection
+    const columns = process.stdout.columns || 80;
+    const rows = process.stdout.rows || 24;
+    
+    return {
+      width: columns,
+      height: rows,
+      breakpoint: this.identifyBreakpoint({ width: columns }),
+      capabilities: this.detectTerminalCapabilities(),
+      category: this.categorizeDimensions(columns, rows),
+      enhanced: false
+    };
+  }
+
+  /**
+   * Convert advanced capabilities to legacy format for compatibility
+   */
+  convertCapabilitiesToLegacyFormat(capabilities) {
+    if (!capabilities) {
+      return this.detectTerminalCapabilities();
+    }
+    
+    return {
+      hasColor: capabilities.colors?.supports16 || false,
+      trueColor: capabilities.colors?.trueColor || false,
+      isTTY: capabilities.environment?.isTTY || false,
+      supportsUnicode: capabilities.unicode?.basicSupport || false,
+      terminalType: capabilities.environment?.term || 'unknown',
+      mouseSupport: capabilities.mouse?.supported || false,
+      tier: capabilities.tier || 'standard'
+    };
+  }
+
+  detectTerminalCapabilities() {
+    return {
+      hasColor: process.stdout.hasColors && process.stdout.hasColors(),
+      isTTY: process.stdout.isTTY,
+      supportsUnicode: this.detectUnicodeSupport(),
+      terminalType: process.env.TERM || 'unknown'
+    };
+  }
+
+  detectUnicodeSupport() {
+    // Check for UTF-8 support in terminal
+    const encoding = process.stdout.encoding || process.env.LANG || '';
+    return encoding.toLowerCase().includes('utf-8') || encoding.toLowerCase().includes('utf8');
+  }
+
+  categorizeDimensions(width, height) {
+    const totalCells = width * height;
+    
+    if (totalCells < 2000) return 'tiny';
+    if (totalCells < 5000) return 'small';
+    if (totalCells < 10000) return 'medium';
+    if (totalCells < 20000) return 'large';
+    return 'xlarge';
+  }
+
+  matchElementsBetweenLayouts(layout1, layout2) {
+    const pairs = [];
+    
+    layout1.children.forEach(element1 => {
+      const matchingElement = layout2.children.find(element2 => 
+        element2.name === element1.name
+      );
+      
+      pairs.push({
+        from: element1,
+        to: matchingElement || null
+      });
+    });
+    
+    return pairs;
+  }
+
+  optimizeAccessibility(layout) {
+    // Ensure proper reading order
+    layout.children.sort((a, b) => {
+      if (a.y !== b.y) return a.y - b.y;
+      return a.x - b.x;
+    });
+    
+    // Add accessibility metadata
+    layout.children.forEach((element, index) => {
+      element.tabIndex = index;
+      element.ariaLabel = this.generateAriaLabel(element);
+    });
+  }
+
+  generateAriaLabel(element) {
+    const typeLabels = {
+      'image': 'Image',
+      'document': 'Document',
+      'text': 'Text content',
+      'video': 'Video',
+      'audio': 'Audio'
+    };
+    
+    const typeLabel = typeLabels[element.type] || 'Content';
+    return `${typeLabel}: ${element.name}`;
+  }
+}
+
+// === SUPPORTING CLASSES ===
+
+class FlexboxGridSystem {
+  calculateOptimalGrid(items, dimensions, contentDensity, options = {}) {
+    const columnsCount = this.calculateOptimalColumns(items.length, dimensions.width);
+    const rowsCount = Math.ceil(items.length / columnsCount);
+    
+    return {
+      columns: columnsCount,
+      rows: rowsCount,
+      gap: this.calculateOptimalGap(dimensions.width),
+      distribution: this.calculateItemDistribution(items, columnsCount, rowsCount)
+    };
+  }
+
+  calculateOptimalColumns(itemCount, width) {
+    if (width < 500) return 1;
+    if (width < 800) return Math.min(2, itemCount);
+    if (width < 1200) return Math.min(3, itemCount);
+    return Math.min(4, itemCount);
+  }
+
+  calculateOptimalGap(width) {
+    return Math.max(10, width * 0.02);
+  }
+
+  calculateItemDistribution(items, columns, rows) {
+    const distribution = [];
+    
+    for (let i = 0; i < items.length; i++) {
+      const row = Math.floor(i / columns);
+      const col = i % columns;
+      
+      distribution.push({
+        item: items[i],
+        row,
+        col,
+        span: this.calculateItemSpan(items[i], columns)
+      });
+    }
+    
+    return distribution;
+  }
+
+  calculateItemSpan(item, maxColumns) {
+    if (item.role === 'hero') return maxColumns;
+    if (item.type === 'video') return Math.min(2, maxColumns);
+    return 1;
+  }
+
+  generateGrid(config) {
+    // This would generate actual CSS Grid or Flexbox rules
+    return {
+      display: 'grid',
+      gridTemplateColumns: `repeat(${config.columns}, 1fr)`,
+      gridTemplateRows: `repeat(${config.rows}, auto)`,
+      gap: `${config.gap}px`,
+      items: config.distribution
+    };
+  }
+}
+
+class LayoutStrategyEngine {
+  selectStrategy(items, dimensions, options) {
+    const strategies = {
+      'magazine': new MagazineStrategy(),
+      'portfolio': new PortfolioStrategy(),
+      'academic': new AcademicStrategy(),
+      'gallery': new GalleryStrategy()
+    };
+
+    const selectedStrategy = options.strategy || this.analyzeAndSelectStrategy(items, dimensions);
+    return strategies[selectedStrategy] || strategies.magazine;
+  }
+
+  analyzeAndSelectStrategy(items, dimensions) {
+    const analysis = {
+      imageHeavy: items.filter(item => item.type === 'image').length > items.length * 0.6,
+      hasHero: items.some(item => item.role === 'hero'),
+      isNarrowScreen: dimensions.width < 600,
+      itemCount: items.length
+    };
+
+    if (analysis.imageHeavy) return 'gallery';
+    if (analysis.hasHero && analysis.itemCount <= 6) return 'portfolio';
+    if (analysis.isNarrowScreen) return 'academic';
+    return 'magazine';
+  }
+}
+
+// Strategy implementations would go here...
+class MagazineStrategy {
+  async arrangeItems(items, rootNode, dimensions) {
+    // Implementation for magazine-style layout
+    return [];
+  }
+}
+
+class PortfolioStrategy {
+  async arrangeItems(items, rootNode, dimensions) {
+    // Implementation for portfolio-style layout
+    return [];
+  }
+}
+
+class AcademicStrategy {
+  async arrangeItems(items, rootNode, dimensions) {
+    // Implementation for academic-style layout
+    return [];
+  }
+}
+
+class GalleryStrategy {
+  async arrangeItems(items, rootNode, dimensions) {
+    // Implementation for gallery-style layout
+    return [];
+  }
+}

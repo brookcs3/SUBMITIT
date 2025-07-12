@@ -1,0 +1,15 @@
+{
+  "name": "test-project",
+  "theme": "default",
+  "created": "2025-07-12T13:49:06.145Z",
+  "layout": {
+    "type": "column",
+    "children": []
+  },
+  "files": [],
+  "metadata": {
+    "title": "test-project",
+    "description": "test-project - Created with submitit",
+    "author": "cameronbrooks"
+  }
+}
