@@ -1,6 +1,6 @@
-import { readFile, writeFile, copyFile, stat } from 'fs/promises';
-import { join, basename, extname } from 'path';
-import { fileURLToPath } from 'url';
+import { writeFile, copyFile, stat } from 'node:fs/promises';
+import { join, basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import chalk from 'chalk';
 import { globby } from 'globby';
 import { EnhancedYogaLayoutEngine } from '../lib/EnhancedYogaLayoutEngine.js';
@@ -10,7 +10,24 @@ import SmartFileHandler from '../ninja/SmartFileHandler.js';
 import IncrementalYogaDiffing from '../ninja/IncrementalYogaDiffing.js';
 import PreviewManager from '../core/PreviewManager.js';
 
-export async function addContent(files, options) {
+// Get directory name for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+
+// Type imports
+/** @typedef {import('../types').FileInfo} FileInfo */
+/** @typedef {import('../types').ProjectConfig} ProjectConfig */
+/** @typedef {import('../types').ProcessingResult} ProcessingResult */
+/** @typedef {import('../types').LayoutResult} LayoutResult */
+/** @typedef {import('../types').AddOptions} AddOptions */
+/** @typedef {import('../types/smart-file-handler').ProcessFileOptions} ProcessFileOptions */
+/** @typedef {import('../types/smart-file-handler').ProcessFilesResult} ProcessFilesResult */
+
+/**
+ * @param {string[]} files
+ * @param {AddOptions} options
+ */
+export async function addContent(files, options = {}) {
   try {
     console.log(chalk.green('🚀 Adding content with semantic role detection...'));
     
@@ -83,8 +100,8 @@ export async function addContent(files, options) {
           }
         }
         
-      } catch (error) {
-        console.error(chalk.red(`❌ Error adding ${fileName}:`, error.message));
+      } catch (/** @type {any} */ error) {
+        console.error(chalk.red(`❌ Error adding ${fileName}:`, error?.message || 'Unknown error'));
       }
     }
     
@@ -94,6 +111,11 @@ export async function addContent(files, options) {
     // Smart file processing with Ninja-style caching
     console.log(chalk.yellow('⚡ Processing files with Ninja-style incremental engine...'));
     
+    /**
+     * @param {string} content
+     * @param {string} filePath
+     * @returns {Promise<{processed: boolean, role?: string, metadata?: any, dependencies: string[], content: string}>}
+     */
     const fileProcessor = async (content, filePath) => {
       const fileInfo = fileInfos.find(f => f.path === filePath);
       return {
@@ -105,6 +127,7 @@ export async function addContent(files, options) {
       };
     };
     
+    /** @type {ProcessFilesResult} */
     const processingResult = await smartHandler.processFiles(
       fileInfos.map(f => f.path),
       fileProcessor,
@@ -113,33 +136,73 @@ export async function addContent(files, options) {
     
     // Show processing metrics
     const metrics = smartHandler.getMetrics();
-    console.log(chalk.cyan(`📊 Processed ${processingResult.results.length}/${fileInfos.length} files`));
+    const processedCount = processingResult.results?.filter(r => r.success).length || 0;
+    const errorCount = processingResult.errors?.length || 0;
+    const totalFiles = fileInfos.length;
+    
+    console.log(chalk.cyan(`📊 Processed ${processedCount}/${totalFiles} files`));
     console.log(chalk.cyan(`⚡ Cache: ${(metrics.cacheHitRatio * 100).toFixed(1)}% hits (${metrics.cacheSize} entries)`));
     
-    if (processingResult.errors.length > 0) {
-      console.log(chalk.yellow(`⚠️  ${processingResult.errors.length} files had processing errors`));
+    if (errorCount > 0) {
+      console.log(chalk.yellow(`⚠️  ${errorCount} files had processing errors`));
+      if (options.verbose) {
+        processingResult.errors.forEach((error, index) => {
+          const err = /** @type {Error} */ (error);
+          console.log(chalk.yellow(`   ${index + 1}. ${err.message || 'Unknown error'}`));
+          if ('stack' in err && options.debug) {
+            console.log(chalk.gray(`      ${String(err.stack).split('\n').slice(0, 3).join('\n      ')}`));
+          }
+        });
+      }
     }
     
     // Update layout using incremental Yoga diffing
     console.log(chalk.blue('🧘 Calculating layout with incremental Yoga diffing...'));
     
+    /** @type {Map<string, import('../types').LayoutResult>} */
     const layoutUpdates = new Map();
-    for (const fileInfo of fileInfos) {
-      const layoutProps = {
-        width: getLayoutWidth(fileInfo.role),
-        height: 'auto',
-        padding: 1,
-        role: fileInfo.role,
-        content: fileInfo.content?.substring(0, 200) || ''
-      };
-      
-      const layoutResult = await yogaDiffing.calculateIncrementalLayout(
-        `file-${fileInfo.path}`,
-        layoutProps,
-        `role-${fileInfo.role}`
-      );
-      
-      layoutUpdates.set(fileInfo.path, layoutResult);
+    
+    try {
+      for (const fileInfo of fileInfos) {
+        if (!fileInfo.path) {
+          console.warn(chalk.yellow(`⚠️  Skipping file with missing path`));
+          continue;
+        }
+        
+        const layoutProps = {
+          width: getLayoutWidth(fileInfo.role),
+          height: 'auto',
+          padding: 1,
+          role: fileInfo.role,
+          content: fileInfo.content?.substring(0, 200) || ''
+        };
+        
+        try {
+          const layoutResult = await yogaDiffing.calculateIncrementalLayout(
+            `file-${fileInfo.path}`,
+            layoutProps,
+            `role-${fileInfo.role}`
+          );
+          
+          if (layoutResult) {
+            layoutUpdates.set(fileInfo.path, layoutResult);
+          } else {
+            console.warn(chalk.yellow(`⚠️  No layout result for ${fileInfo.path}`));
+          }
+        } catch (error) {
+          const err = /** @type {Error} */ (error);
+          console.error(chalk.red(`❌ Error calculating layout for ${fileInfo.path}:`), err.message);
+          if (options.debug && 'stack' in err) {
+            console.error(chalk.gray(String(err.stack)));
+          }
+        }
+      }
+    } catch (error) {
+      const err = /** @type {Error} */ (error);
+      console.error(chalk.red('❌ Error during layout calculation:'), err.message);
+      if (options.debug && 'stack' in err) {
+        console.error(chalk.gray(String(err.stack)));
+      }
     }
     
     const yogaMetrics = yogaDiffing.getMetrics();
@@ -149,17 +212,37 @@ export async function addContent(files, options) {
     if (options.preview) {
       console.log(chalk.magenta('🌐 Generating live preview...'));
       
-      const previewResult = await previewManager.startPreview(fileInfos, {
-        theme: config.theme,
-        mode: 'desktop'
-      });
-      
-      console.log(chalk.green(`🎉 Preview available at: ${previewResult.astroUrl}`));
-      
-      // Auto-open if specified
-      if (options.open) {
-        const { spawn } = await import('child_process');
-        spawn('open', [previewResult.astroUrl], { detached: true });
+      try {
+        const previewResult = await previewManager.startPreview(fileInfos, {
+          theme: config?.theme || 'default',
+          mode: 'desktop'
+        });
+        
+        if (previewResult?.astroUrl) {
+          console.log(chalk.green(`🎉 Preview available at: ${previewResult.astroUrl}`));
+          
+          // Auto-open if specified
+          if (options.open) {
+            try {
+              const { spawn } = await import('node:child_process');
+              spawn('open', [previewResult.astroUrl], { 
+                detached: true,
+                stdio: 'ignore'
+              }).unref();
+            } catch (openError) {
+              const openErr = /** @type {Error} */ (openError);
+              console.warn(chalk.yellow(`⚠️  Could not open preview in browser: ${openErr.message}`));
+            }
+          }
+        } else {
+          console.warn(chalk.yellow('⚠️  Preview URL not available'));
+        }
+      } catch (previewError) {
+        const prevErr = /** @type {Error} */ (previewError);
+        console.error(chalk.red('❌ Error generating preview:'), prevErr.message);
+        if (options.debug && 'stack' in prevErr) {
+          console.error(chalk.gray(String(prevErr.stack)));
+        }
       }
     }
     
@@ -193,12 +276,16 @@ export async function addContent(files, options) {
       console.log('Project Stats:', roleStats);
     }
     
-  } catch (error) {
-    console.error(chalk.red('❌ Error adding content:'), error.message);
+  } catch (/** @type {any} */ error) {
+    console.error(chalk.red('❌ Error adding content:'), error?.message || 'Unknown error');
     process.exit(1);
   }
 }
 
+/**
+ * @param {string} extension
+ * @returns {string}
+ */
 function getFileType(extension) {
   const types = {
     '.pdf': 'document',
@@ -221,6 +308,10 @@ function getFileType(extension) {
   return types[extension] || 'file';
 }
 
+/**
+ * @param {string} type
+ * @returns {string}
+ */
 function getDefaultRole(type) {
   const roles = {
     'image': 'gallery',
@@ -233,6 +324,10 @@ function getDefaultRole(type) {
   return roles[type] || 'content';
 }
 
+/**
+ * @param {number} bytes
+ * @returns {string}
+ */
 function formatFileSize(bytes) {
   if (bytes === 0) return '0 B';
   const k = 1024;
@@ -241,33 +336,39 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
+/**
+ * @param {ProjectConfig} config
+ */
 async function updateLayoutWithYoga(config) {
   const layoutPath = join(process.cwd(), 'layout.json');
   
   // Initialize Yoga layout engine
   const layoutEngine = new EnhancedYogaLayoutEngine();
-  await layoutEngine.initializeEngine();
   
   console.log(chalk.blue('🧘 Calculating optimal layout with Yoga...'));
   
-  // Generate responsive layout using Yoga
-  const layout = await layoutEngine.generateResponsiveLayout(config.files, {
-    theme: config.theme,
-    responsive: true,
-    optimize: true
-  });
+  // Calculate layout using Yoga
+  const layout = await layoutEngine.calculateLayout(1200, 800);
   
-  // Save the generated layout
-  await writeFile(layoutPath, JSON.stringify({ 
-    layout: layout,
-    generated: Date.now(),
-    engine: 'yoga'
-  }, null, 2));
-  
-  console.log(chalk.green('✅ Layout optimized using Yoga flexbox engine'));
+  if (layout) {
+    // Save the generated layout
+    await writeFile(layoutPath, JSON.stringify({ 
+      layout: layout,
+      generated: Date.now(),
+      engine: 'yoga'
+    }, null, 2));
+    
+    console.log(chalk.green('✅ Layout optimized using Yoga flexbox engine'));
+  } else {
+    console.log(chalk.yellow('⚠️  No layout generated'));
+  }
 }
 
-async function processFilesWithSmartHandler(config, addedFiles) {
+/**
+ * @param {ProjectConfig} _config
+ * @param {string[]} addedFiles
+ */
+async function processFilesWithSmartHandler(_config, addedFiles) {
   console.log(chalk.yellow('[CONDUCTOR] Initializing file orchestration...'));
   
   const smartHandler = new SmartFileHandlerSimple();
@@ -323,6 +424,10 @@ async function processFilesWithSmartHandler(config, addedFiles) {
   console.log(chalk.gray(`💾 Cache: ${stats.cacheSize} entries, Dependencies: ${stats.dependencyGraphSize} mappings`));
 }
 
+/**
+ * @param {string} type
+ * @returns {string}
+ */
 function getDefaultWidth(type) {
   const widths = {
     'image': '100%',
@@ -335,6 +440,10 @@ function getDefaultWidth(type) {
   return widths[type] || '100%';
 }
 
+/**
+ * @param {string} type
+ * @returns {string}
+ */
 function getDefaultHeight(type) {
   const heights = {
     'image': 'auto',
@@ -347,6 +456,10 @@ function getDefaultHeight(type) {
   return heights[type] || 'auto';
 }
 
+/**
+ * @param {string} role
+ * @returns {string}
+ */
 function getRoleIcon(role) {
   const icons = {
     hero: '🌟',
@@ -363,6 +476,10 @@ function getRoleIcon(role) {
   return icons[role] || '📄';
 }
 
+/**
+ * @param {string} role
+ * @returns {number}
+ */
 function getLayoutWidth(role) {
   const widths = {
     hero: 100,
@@ -378,7 +495,10 @@ function getLayoutWidth(role) {
   return widths[role] || 80;
 }
 
-// Export factory function for CLI integration
+/**
+ * @param {any} container
+ * @returns {(files: string[], options: AddOptions) => Promise<void>}
+ */
 export function createAddCommand(container) {
   return async (files, options) => {
     return await addContent(files, options);

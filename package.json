@@ -17,7 +17,7 @@
     "test:staging": "tsx src/scripts/test-staging.ts",
     "lint": "eslint src --ext .ts,.tsx,.js",
     "type-check": "tsc --noEmit",
-    "format": "prettier --write 'src/**/*.{ts,tsx,js,jsx,json,md}'
+    "format": "prettier --write 'src/**/*.{ts,tsx,js,jsx,json,md}'"
   },
   "keywords": [
     "cli",

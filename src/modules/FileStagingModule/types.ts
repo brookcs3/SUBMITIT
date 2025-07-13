@@ -130,22 +130,21 @@ export interface ValidationPanelProps {
 }
 
 export interface FileOperations {
-  /** Load directory contents */
+  // File operations
   loadDirectory: (path: string) => Promise<DirectoryStructure | null>;
-  /** Add files to the staging area */
   addFiles: (files: string[], targetDir: string) => Promise<FileMetadata[]>;
-  /** Remove a file from the staging area */
   removeFile: (path: string) => Promise<boolean>;
-  /** Create a new directory */
   createDirectory: (path: string, name: string) => Promise<boolean>;
-  /** Rename a file or directory */
   rename: (oldPath: string, newName: string) => Promise<boolean>;
-  /** Move a file or directory */
   move: (sourcePath: string, targetPath: string) => Promise<boolean>;
-  /** Copy a file or directory */
   copy: (sourcePath: string, targetPath: string) => Promise<boolean>;
-  /** Check if a path exists */
   exists: (path: string) => Promise<boolean>;
-  /** Get file stats */
   getStats: (path: string) => Promise<Stats | null>;
+  
+  // File content operations
+  readFile: (filePath: string) => Promise<string>;
+  
+  // State management
+  isLoading: boolean;
+  error: Error | null;
 }

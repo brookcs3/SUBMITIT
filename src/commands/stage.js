@@ -1,6 +1,8 @@
 import { join } from 'path';
 import chalk from 'chalk';
-import { FileStagingModule } from '../modules/FileStagingModule/FileStagingModule.js';
+import React from 'react';
+import { render } from 'ink';
+import FileStagingModule from '../modules/FileStagingModule/FileStagingModule.js';
 import { neonTheme } from '../themes/neonTheme.js';
 
 /**
@@ -13,17 +15,24 @@ export function createStageCommand(container) {
     try {
       console.log(chalk.blue('🚀 Launching File Staging Module...'));
       
-      // Initialize the File Staging Module with the Neon theme
-      const fileStagingModule = new FileStagingModule({
-        theme: neonTheme,
-        maxFileSize: options.maxSize || 10 * 1024 * 1024, // 10MB default
-        allowedExtensions: options.extensions ? options.extensions.split(',') : null,
-        basePath: process.cwd(),
-        logger: container.resolve('logger')
-      });
+      // Render the File Staging Module with Ink
+      const { waitUntilExit } = render(
+        <FileStagingModule 
+          initialPath={join(process.cwd(), options.path || '.')}
+          theme={neonTheme}
+          onComplete={(files) => {
+            console.log(chalk.green(`✅ Successfully staged ${files.length} files`));
+            process.exit(0);
+          }}
+          onCancel={() => {
+            console.log(chalk.yellow('❌ File staging cancelled'));
+            process.exit(1);
+          }}
+        />
+      );
 
-      // Start the file staging interface
-      await fileStagingModule.start();
+      // Wait for the component to unmount
+      await waitUntilExit();
       
       console.log(chalk.green('✅ File staging completed successfully'));
     } catch (error) {
@@ -45,16 +54,30 @@ export function registerStageCommand(program, container) {
     .option('-s, --max-size <size>', 'Maximum file size in MB', '10')
     .option('-e, --extensions <extensions>', 'Comma-separated list of allowed file extensions')
     .option('-r, --recursive', 'Include files in subdirectories', false)
-    .action(async (path = '.', options) => {
+    .action(async (path = '.', cmd) => {
+      // The container parameter is intentionally unused but kept for future dependency injection
+      // Prefix with underscore to indicate it's intentionally unused
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _unusedContainer = container;
       try {
         const stageCommand = createStageCommand(container);
         await stageCommand({
-          ...options,
-          path: join(process.cwd(), path),
-          maxSize: parseInt(options.maxSize, 10) * 1024 * 1024 // Convert MB to bytes
+          path,
+          maxSize: parseInt(cmd.maxSize, 10) * 1024 * 1024, // Convert MB to bytes
+          extensions: cmd.extensions,
+          recursive: cmd.recursive
         });
       } catch (error) {
-        console.error(chalk.red('❌ Failed to execute stage command:'), error.message);
+        // Handle both Error objects and other thrown values
+        const errorMessage = error && typeof error === 'object' && 'message' in error 
+          ? error.message 
+          : String(error);
+        console.error(chalk.red('❌ Failed to execute stage command:'), errorMessage);
+        
+        // Log stack trace if available
+        if (error && typeof error === 'object' && 'stack' in error) {
+          console.error(chalk.gray(error.stack));
+        }
         process.exit(1);
       }
     });

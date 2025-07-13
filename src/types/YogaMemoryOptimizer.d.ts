@@ -34,6 +34,11 @@ declare module '../lib/YogaMemoryOptimizer' {
   }
 
   class YogaMemoryOptimizer {
+    // Configuration properties
+    gcInterval: number;
+    memoryReportInterval: number;
+    leakDetectionInterval: number;
+    
     constructor(options?: {
       maxPoolSize?: number;
       gcInterval?: number;

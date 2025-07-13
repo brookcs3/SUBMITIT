@@ -8,44 +8,559 @@
 import { EventEmitter } from 'events';
 import chalk from 'chalk';
 
-export class AdvancedTerminalDetector extends EventEmitter {
+/**
+ * Advanced Terminal Detector
+ * 
+ * @class AdvancedTerminalDetector
+ * @extends {EventEmitter}
+ */
+class AdvancedTerminalDetector extends EventEmitter {
+  /**
+   * Creates an instance of AdvancedTerminalDetector
+   * @param {Object} [options={}] Configuration options
+   * @param {boolean} [options.enableCapabilityDetection=true] Whether to enable capability detection
+   * @param {boolean} [options.enableRealTimeMonitoring=true] Whether to enable real-time monitoring
+   * @param {number} [options.detectionInterval=1000] Detection interval in milliseconds
+   */
   constructor(options = {}) {
     super();
     
+    // Default options
     this.options = {
-      enableRealtimeDetection: true,
       enableCapabilityDetection: true,
-      enablePerformanceOptimization: true,
-      detectionInterval: 1000, // 1 second
-      debounceDelay: 250, // 250ms debounce
+      enableRealTimeMonitoring: true,
+      detectionInterval: 1000, // ms
       ...options
     };
     
-    // Terminal state tracking
-    this.currentDimensions = null;
-    this.terminalCapabilities = null;
-    this.detectionHistory = [];
-    this.lastDetection = null;
-    this.isMonitoring = false;
-    
-    // Performance tracking
-    this.detectionStats = {
-      totalDetections: 0,
-      dimensionChanges: 0,
-      capabilityChanges: 0,
-      averageDetectionTime: 0,
-      lastDetectionTime: 0
+    // Current state
+    this.currentDimensions = this.detectDimensions();
+    this.terminalCapabilities = {
+      supports256Colors: false,
+      supportsTrueColor: false,
+      unicode: false,
+      hyperlinks: false,
+      images: false,
+      mouse: false,
+      clipboard: false,
+      performance: {
+        renderTime: 0,
+        frameRate: 0
+      }
     };
     
-    // Debouncing for rapid resize events
+    // Internal state
     this.resizeTimeout = null;
+    this.periodicCheckInterval = null;
     this.dimensionChangeHandlers = new Set();
+    this.capabilityChangeHandlers = new Set();
+    this.isTerminalResponsive = true;
+    this.detectionInProgress = false;
     
-    // Initialize detection
-    this.initialize();
+    // Bind methods
+    this.handleResize = this.handleResize.bind(this);
+    this.detect = this.detect.bind(this);
+    this.getTerminalReport = this.getTerminalReport.bind(this);
+    this.supports = this.supports.bind(this);
+    this.getTerminalType = this.getTerminalType.bind(this);
+    this.getDimensions = this.getDimensions.bind(this);
+    this.supportsColors = this.supportsColors.bind(this);
+    this.initialize = this.initialize.bind(this);
+    this.detectDimensions = this.detectDimensions.bind(this);
   }
   
   // === INITIALIZATION ===
+  
+  /**
+   * Initialize the terminal detector
+   * @returns {Promise<void>}
+   */
+  async initialize() {
+    if (this.detectionInProgress) {
+      return;
+    }
+    
+    try {
+      this.detectionInProgress = true;
+      
+      // Perform initial detection
+      await this.performInitialDetection();
+      
+      // Start real-time monitoring if enabled
+      if (this.options.enableRealTimeMonitoring) {
+        this.startRealtimeMonitoring();
+      }
+      
+      this.emit('initialized');
+      return this;
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.emit('error', new Error(`Initialization failed: ${errorMessage}`));
+      throw error;
+    } finally {
+      this.detectionInProgress = false;
+    }
+  }
+  
+  // === DETECTION METHODS ===
+  
+  /**
+   * Detect terminal dimensions
+   * @returns {{columns: number, rows: number}} Terminal dimensions
+   */
+  detectDimensions() {
+    try {
+      const { columns = 80, rows = 24 } = process.stdout;
+      return { columns, rows };
+    } catch (error) {
+      this.logError('Failed to detect terminal dimensions', error);
+      return { columns: 80, rows: 24 }; // Fallback to default dimensions
+    }
+  }
+  
+  /**
+   * Detect terminal capabilities
+   * @returns {Promise<Object>} Terminal capabilities object
+   */
+  async detectCapabilities() {
+    const capabilities = {
+      colors: this.supportsColors(),
+      unicode: this.supportsUnicode(),
+      emoji: this.supportsEmoji(),
+      hyperlinks: this.supportsHyperlinks(),
+      images: this.supportsImages(),
+      mouse: this.supportsMouse(),
+      clipboard: this.supportsClipboard(),
+      screenReader: this.isScreenReaderActive(),
+      cjk: this.supportsCJK(),
+      sixel: this.supportsSixel(),
+      iterm2: this.isITerm2(),
+      kitty: this.isKitty(),
+      wezterm: this.isWezTerm(),
+      windowsTerminal: this.isWindowsTerminal(),
+      vscode: this.isVSCode(),
+      tmux: this.isTmux(),
+      screen: this.isScreen(),
+      ci: this.isCI(),
+      docker: this.isDocker(),
+      wsl: this.isWSL(),
+      ssh: this.isSSH(),
+      root: this.isRoot()
+    };
+    
+    this.emit('capabilitiesDetected', capabilities);
+    return capabilities;
+  }
+  
+  /**
+   * Perform initial detection of terminal capabilities
+   * @returns {Promise<Object>} Detection result with dimensions and capabilities
+   */
+  async performInitialDetection() {
+    try {
+      // Detect terminal dimensions
+      this.currentDimensions = this.detectDimensions();
+      
+      // Detect terminal capabilities if enabled
+      if (this.options.enableCapabilityDetection) {
+        this.terminalCapabilities = await this.detectCapabilities();
+      }
+      
+      // Record detection
+      this.recordDetection();
+      
+      // Emit detection event
+      this.emit('detection', {
+        type: 'initial',
+        dimensions: this.currentDimensions,
+        capabilities: this.terminalCapabilities
+      });
+      
+      return {
+        dimensions: this.currentDimensions,
+        capabilities: this.terminalCapabilities
+      };
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.emit('error', new Error(`Detection failed: ${errorMessage}`));
+      throw error;
+    }
+  }
+  
+  // === CAPABILITY DETECTION METHODS ===
+  
+  /**
+   * Check if terminal supports colors
+   * @returns {boolean} True if colors are supported
+   */
+  supportsColors() {
+    return !!(
+      process.stdout.isTTY &&
+      (process.env.TERM !== 'dumb' || Boolean(process.env.COLORTERM)) &&
+      (process.platform !== 'win32' || process.env.ConEmuTask || process.env.TERM_PROGRAM === 'vscode')
+    );
+  }
+  
+  // === TERMINAL ENVIRONMENT DETECTION ===
+  
+  /**
+   * Check if running in iTerm2
+   * @returns {boolean} True if running in iTerm2
+   */
+  isITerm2() {
+    return Boolean(
+      process.env.TERM_PROGRAM === 'iTerm.app' ||
+      process.env.TERM_PROGRAM === 'iTerm2' ||
+      process.env.ITERM_SESSION_ID ||
+      process.env.ITERM_PROFILE
+    );
+  }
+  
+  /**
+   * Check if running in Kitty terminal
+   * @returns {boolean} True if running in Kitty
+   */
+  isKitty() {
+    return Boolean(
+      process.env.KITTY_WINDOW_ID ||
+      process.env.KITTY_PID ||
+      process.env.TERM?.includes('kitty')
+    );
+  }
+  
+  /**
+   * Check if running in WezTerm
+   * @returns {boolean} True if running in WezTerm
+   */
+  isWezTerm() {
+    return Boolean(
+      process.env.WEZTERM_EXECUTABLE ||
+      process.env.WEZTERM_CONFIG_FILE ||
+      process.env.TERM?.includes('wezterm')
+    );
+  }
+  
+  /**
+   * Check if running in Windows Terminal
+   * @returns {boolean} True if running in Windows Terminal
+   */
+  isWindowsTerminal() {
+    return Boolean(
+      process.env.WT_SESSION ||
+      process.env.WT_PROFILE_ID ||
+      process.env.TERM_PROGRAM === 'vscode' && process.env.WT_SESSION
+    );
+  }
+  
+  /**
+   * Check if running in VSCode integrated terminal
+   * @returns {boolean} True if running in VSCode
+   */
+  isVSCode() {
+    return Boolean(
+      process.env.TERM_PROGRAM === 'vscode' ||
+      process.env.VSCODE_PID ||
+      process.env.VSCODE_CWD
+    );
+  }
+  
+  /**
+   * Check if running inside tmux
+   * @returns {boolean} True if running inside tmux
+   */
+  isTmux() {
+    return Boolean(process.env.TMUX || process.env.TMUX_PANE);
+  }
+  
+  /**
+   * Check if running inside GNU Screen
+   * @returns {boolean} True if running inside Screen
+   */
+  isScreen() {
+    return Boolean(process.env.SCREEN || process.env.STARTED_SCREEN);
+  }
+  
+  /**
+   * Check if running in a CI environment
+   * @returns {boolean} True if running in CI
+   */
+  isCI() {
+    return Boolean(
+      process.env.CI || // GitHub Actions, Travis CI, CircleCI, Cirrus CI, GitLab CI, AppVeyor, CodeShip, dsari
+      process.env.CONTINUOUS_INTEGRATION || // Travis CI, Cirrus CI
+      process.env.BUILD_NUMBER || // Jenkins, TeamCity
+      process.env.RUN_ID || // TaskCluster, dsari
+      process.env.BUILD_ID || // Jenkins, TeamCity
+      process.env.CI_NAME || // Codeship and others
+      process.env.TRAVIS || // Travis CI
+      process.env.GITHUB_ACTIONS || // GitHub Actions
+      process.env.CIRCLECI || // CircleCI
+      process.env.CIRRUS_CI || // Cirrus CI
+      process.env.GITLAB_CI || // GitLab CI
+      process.env.APPVEYOR || // AppVeyor
+      process.env.CODESHIP || // CodeShip
+      process.env.DRONE || // Drone
+      process.env.SHIPPABLE || // Shippable
+      process.env.TEAMCITY_VERSION || // TeamCity
+      process.env.BUILDKITE || // Buildkite
+      process.env.BUILDKITE_BUILD_NUMBER || // Buildkite
+      process.env.BITBUCKET_COMMIT || // Bitbucket Pipelines
+      process.env.BITBUCKET_BUILD_NUMBER || // Bitbucket Pipelines
+      process.env.CODEBUILD_BUILD_ID || // AWS CodeBuild
+      process.env.TF_BUILD // Azure Pipelines
+    );
+  }
+  
+  /**
+   * Check if running inside a Docker container
+   * @returns {boolean} True if running in Docker
+   */
+  isDocker() {
+    // Check for .dockerenv file (most reliable method)
+    try {
+      const fs = require('fs');
+      if (fs.existsSync('/.dockerenv')) {
+        return true;
+      }
+    } catch (err) {
+      // Ignore errors
+    }
+    
+    // Check for Docker-specific cgroup
+    try {
+      const fs = require('fs');
+      const cgroup = fs.readFileSync('/proc/self/cgroup', 'utf8');
+      return cgroup.includes('docker') || cgroup.includes('kubepods');
+    } catch (err) {
+      // Ignore errors
+    }
+    
+    // Fall back to environment variables
+    return Boolean(
+      process.env.DOCKER === 'true' ||
+      process.env.CONTAINER === 'docker' ||
+      process.env.KUBERNETES_SERVICE_HOST
+    );
+  }
+  
+  /**
+   * Check if running in Windows Subsystem for Linux (WSL)
+   * @returns {boolean} True if running in WSL
+   */
+  isWSL() {
+    if (process.platform !== 'linux') return false;
+    
+    try {
+      const fs = require('fs');
+      return (
+        fs.existsSync('/proc/version') &&
+        fs.readFileSync('/proc/version', 'utf8').toLowerCase().includes('microsoft')
+      );
+    } catch (err) {
+      return false;
+    }
+  }
+  
+  /**
+   * Check if running over SSH
+   * @returns {boolean} True if running over SSH
+   */
+  isSSH() {
+    return Boolean(
+      process.env.SSH_TTY ||
+      process.env.SSH_CONNECTION ||
+      process.env.SSH_CLIENT ||
+      process.env.SSH_CLIENT_IP ||
+      (process.env.TERM_PROGRAM === 'vscode' && process.env.VSCODE_IPC_HOOK_CLI)
+    );
+  }
+  
+  /**
+   * Check if running as root
+   * @returns {boolean} True if running as root
+   */
+  isRoot() {
+    // For non-Windows platforms
+    if (process.platform !== 'win32') {
+      return process.getuid && process.getuid() === 0;
+    }
+    
+    // For Windows, check if the process has admin privileges
+    try {
+      const execSync = require('child_process').execSync;
+      const result = execSync('net session', { stdio: 'ignore' });
+      return result === null || result === undefined;
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  /**
+   * Check if terminal supports Unicode
+   * @returns {boolean} True if Unicode is supported
+   */
+  supportsUnicode() {
+    // Check for common Unicode support indicators
+    return !/^xterm|^screen|^vt100|^rxvt|color|ansi|cygwin|linux|konsole|iTerm|alacritty|kitty|wezterm/i.test(
+      process.env.TERM || ''
+    ) || Boolean(process.env.CI) || process.platform === 'win32';
+  }
+  
+  /**
+   * Check if terminal supports emoji
+   * @returns {boolean} True if emoji are supported
+   */
+  supportsEmoji() {
+    // Most modern terminals support emoji
+    return this.supportsUnicode() && 
+      !/^xterm|^screen|^vt100|^rxvt|^linux/i.test(process.env.TERM || '') &&
+      !process.env.TERM_PROGRAM?.includes('Apple_Terminal');
+  }
+  
+  /**
+   * Check if terminal supports hyperlinks
+   * @returns {boolean} True if hyperlinks are supported
+   */
+  supportsHyperlinks() {
+    // Check for known terminals that support hyperlinks
+    const supported = [
+      'iTerm',
+      'Hyper',
+      'vscode',
+      'wezterm',
+      'kitty',
+      'alacritty',
+      'WindowsTerminal',
+      'mintty',
+      'konsole',
+      'foot',
+      'terminology',
+      'rio',
+      'contour',
+      'wezterm',
+      'warp',
+      'tabby',
+      'wez',
+      'terminus',
+      'terminator',
+      'tilix',
+      'terminology',
+      'rio',
+      'contour',
+      'wezterm',
+      'warp',
+      'tabby',
+      'wez',
+      'terminus',
+      'terminator',
+      'tilix',
+      'terminology',
+      'rio',
+      'contour',
+      'wezterm',
+      'warp',
+      'tabby',
+      'wez',
+      'terminus',
+      'terminator',
+      'tilix'
+    ];
+    
+    return (
+      Boolean(process.env.TERM_PROGRAM && supported.includes(process.env.TERM_PROGRAM)) ||
+      Boolean(process.env.TERM && supported.some(term => process.env.TERM?.includes(term))) ||
+      Boolean(process.env.TERM_PROGRAM?.includes('vscode')) ||
+      Boolean(process.env.WT_SESSION) // Windows Terminal
+    );
+  }
+  
+  /**
+   * Check if terminal supports images
+   * @returns {boolean} True if images are supported
+   */
+  supportsImages() {
+    // Check for terminals that support image display
+    return this.isITerm2() || this.isKitty() || this.isWezTerm();
+  }
+  
+  /**
+   * Check if terminal supports mouse events
+   * @returns {boolean} True if mouse events are supported
+   */
+  supportsMouse() {
+    // Most modern terminals support mouse
+    return this.isITerm2() || 
+           this.isKitty() || 
+           this.isWezTerm() || 
+           this.isVSCode() || 
+           this.isWindowsTerminal() ||
+           /xterm|screen|tmux|rxvt|alacritty|foot|terminology|rio|contour|warp|tabby|wez|terminus|terminator|tilix/i.test(process.env.TERM || '');
+  }
+  
+  /**
+   * Check if terminal supports clipboard access
+   * @returns {boolean} True if clipboard access is supported
+   */
+  supportsClipboard() {
+    // Check for known terminals with clipboard support
+    return this.isITerm2() || 
+           this.isKitty() || 
+           this.isWezTerm() || 
+           this.isVSCode() || 
+           this.isWindowsTerminal() ||
+           process.platform === 'darwin' || // macOS has pbcopy/pbpaste
+           process.platform === 'linux' && (process.env.DISPLAY || process.env.WAYLAND_DISPLAY); // X11 or Wayland
+  }
+  
+  /**
+   * Check if a screen reader is active
+   * @returns {boolean} True if a screen reader is active
+   */
+  isScreenReaderActive() {
+    // Check common screen reader environment variables
+    return Boolean(
+      process.env.ACCESSIBILITY_ENABLED === '1' ||
+      process.env.GNOME_ACCESSIBILITY === '1' ||
+      process.env.GTK_MODULES?.includes('gail') ||
+      process.env.QT_ACCESSIBILITY === '1' ||
+      process.env.ACCESSIBILITY_ENABLED === 'true' ||
+      process.env.SCREEN_READER === '1' ||
+      process.env.SCREEN_READER === 'true' ||
+      process.env.NVDA ||
+      process.env.ORCA ||
+      process.env.YASR ||
+      process.env.SPEECHD ||
+      process.env.ESPEAK ||
+      process.env.SPD_GTK
+    );
+  }
+  
+  /**
+   * Check if terminal supports CJK (Chinese, Japanese, Korean) characters
+   * @returns {boolean} True if CJK is supported
+   */
+  supportsCJK() {
+    // Check for CJK locales or LANG settings
+    return /^[a-z]{2,3}_[A-Z]{2}\.?.*UTF-?8$/i.test(process.env.LANG || '') ||
+           /^[a-z]{2,3}_[A-Z]{2}\.?/i.test(process.env.LANG || '') && 
+           ['zh', 'ja', 'ko', 'jp', 'cn', 'tw', 'hk'].some(lang => 
+             (process.env.LANG || '').toLowerCase().startsWith(lang)
+           );
+  }
+  
+  /**
+   * Check if terminal supports Sixel graphics
+   * @returns {boolean} True if Sixel is supported
+   */
+  supportsSixel() {
+    // Check for terminals that support Sixel
+    return this.isWezTerm() || 
+           this.isKitty() || 
+           /xterm|mlterm|mintty|foot|contour|wezterm|warp|tabby|wez|terminus|terminator|tilix/i.test(process.env.TERM || '') ||
+           process.env.SIXEL_SUPPORT === '1';
+  }
   
   async initialize() {
     console.log(chalk.blue('🖥️  Initializing Advanced Terminal Detector...'));
@@ -62,7 +577,8 @@ export class AdvancedTerminalDetector extends EventEmitter {
       console.log(chalk.green('✅ Advanced Terminal Detector initialized'));
       this.emit('detector-ready', this.currentDimensions);
       
-    } catch (error) {
+    } catch (error: unknown) {
+      if (error instanceof Error) {
       console.error(chalk.red('❌ Terminal detector initialization failed:'), error.message);
       throw error;
     }
@@ -76,7 +592,16 @@ export class AdvancedTerminalDetector extends EventEmitter {
     
     // Detect terminal capabilities
     if (this.options.enableCapabilityDetection) {
-      this.terminalCapabilities = await this.detectCapabilities();
+      try {
+        this.terminalCapabilities = await this.detectCapabilities();
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          this.logError('Error detecting terminal capabilities', error);
+        } else {
+          this.logError('Unknown error occurred while detecting terminal capabilities', String(error));
+        }
+        return false;
+      }
     }
     
     // Record detection
@@ -191,7 +716,8 @@ export class AdvancedTerminalDetector extends EventEmitter {
       } else {
         supportLevel = 0.5;
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      if (error instanceof Error) {
       supportLevel = 0.3;
     }
     
@@ -685,7 +1211,8 @@ export class AdvancedTerminalDetector extends EventEmitter {
     this.dimensionChangeHandlers.forEach(handler => {
       try {
         handler(current, previous);
-      } catch (error) {
+      } catch (error: unknown) {
+      if (error instanceof Error) {
         console.warn(chalk.yellow('⚠️  Dimension change handler error:'), error.message);
       }
     });

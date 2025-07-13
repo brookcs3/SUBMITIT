@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { DirectoryStructure, FileMetadata } from '../types';
+import { DirectoryStructure, FileMetadata, FileOperations } from '../types.js';
 
-export const useFileOperations = () => {
+export const useFileOperations = (): FileOperations => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -143,10 +143,111 @@ export const useFileOperations = () => {
     }
   }, []);
 
+  const createDirectory = useCallback(async (dirPath: string, name: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const newDirPath = path.join(dirPath, name);
+      await fs.mkdir(newDirPath, { recursive: true });
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const rename = useCallback(async (oldPath: string, newName: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const dir = path.dirname(oldPath);
+      const newPath = path.join(dir, newName);
+      await fs.rename(oldPath, newPath);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const move = useCallback(async (sourcePath: string, targetPath: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await fs.rename(sourcePath, targetPath);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const copy = useCallback(async (sourcePath: string, targetPath: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await fs.copyFile(sourcePath, targetPath);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const exists = useCallback(async (path: string): Promise<boolean> => {
+    try {
+      await fs.access(path);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const getStats = useCallback(async (path: string): Promise<import('fs').Stats | null> => {
+    try {
+      return await fs.stat(path);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const readFile = useCallback(async (filePath: string): Promise<string> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      return await fs.readFile(filePath, 'utf-8');
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     loadDirectory,
     addFiles,
     removeFile,
+    createDirectory,
+    rename,
+    move,
+    copy,
+    exists,
+    getStats,
+    readFile,
     isLoading,
     error,
   };
