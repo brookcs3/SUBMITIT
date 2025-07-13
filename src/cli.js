@@ -15,6 +15,7 @@ import { createExportCommand } from './commands/export.js';
 import { createWorkplatesCommand } from './commands/workplates.js';
 import { createPostcardCommand } from './commands/postcard.js';
 import { createThemeCommand } from './commands/theme.js';
+import { registerStageCommand } from './commands/stage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -152,6 +153,9 @@ program
   .option('--all', 'Generate all variations')
   .option('--theme <theme>', 'Use specific theme for postcard')
   .action(withContainer(createPostcardCommand));
+
+// Stage files for submission
+registerStageCommand(program, container);
 
 // Interactive mode (default)
 program

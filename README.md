@@ -7,6 +7,7 @@
 ## 🎯 Features
 
 - **🧘 Yoga Layout Engine**: Intelligent spatial arrangement using Facebook's Yoga flexbox engine
+- **📁 File Staging Module**: Interactive file selection, preview, and validation before submission
 - **🖋 Interactive CLI**: Beautiful terminal interface built with Ink and React
 - **⛩️ Astro Web Previews**: Generate stunning web presentations of your deliverables
 - **🥷 Ninja File Operations**: Fast, reliable file processing and packaging
@@ -14,6 +15,7 @@
 - **📦 Smart Packaging**: Intelligent compression with progress tracking
 - **🖼️ ASCII Preview**: Terminal-based preview using Browsh
 - **📊 Rich Metadata**: Comprehensive project information and manifests
+- **🔍 File Validation**: Automatic validation of file types, sizes, and naming conventions
 
 ## 🚀 Quick Start
 
@@ -53,12 +55,34 @@ Initialize a new submitit project with the specified name.
 **Options:**
 - `-t, --theme <theme>` - Set initial theme (default: 'default')
 
-### `submitit add <files...>`
-Add content files to your project.
+### `submitit stage [path]`
 
-**Options:**
-- `--as <type>` - Content type (gallery, document, about, etc.)
-- `--role <role>` - Content role (hero, bio, resume, etc.)
+Interactively stage files for submission with preview and validation.
+
+```bash
+# Stage files in current directory
+submitit stage
+
+# Stage files in specific directory
+submitit stage ./submission/
+
+# Customize file size and extensions
+submitit stage --max-size 20 --extensions pdf,docx,txt
+```
+
+### `submitit add <files...>`
+Add files to your project with optional content typing and role assignment.
+
+```bash
+# Basic usage
+submitit add resume.pdf
+
+# Multiple files with type and role
+submitit add project/*.pdf --as document --role report
+
+# Add all files in a directory
+submitit add images/ --recursive --as gallery
+```
 
 ### `submitit theme <theme>`
 Set the project theme.

@@ -9,13 +9,15 @@
     "submitit-demo": "./simple-cli.js"
   },
   "scripts": {
-    "dev": "node working-cli.js",
-    "demo": "node working-cli.js demo",
-    "build": "node working-cli.js build", 
-    "preview": "node working-cli.js preview",
-    "test": "node test-real-functionality.js",
-    "lint": "echo 'Linting skipped - focus on functionality'",
-    "format": "echo 'Formatting skipped - focus on functionality'"
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/working-cli.ts",
+    "demo": "tsx src/simple-cli.ts",
+    "preview": "tsx src/working-cli.ts preview",
+    "test": "tsx src/test-real-functionality.ts",
+    "test:staging": "tsx src/scripts/test-staging.ts",
+    "lint": "eslint src --ext .ts,.tsx,.js",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write 'src/**/*.{ts,tsx,js,jsx,json,md}'
   },
   "keywords": [
     "cli",
@@ -33,7 +35,20 @@
   "dependencies": {
     "@astrojs/node": "^9.3.0",
     "@astrojs/tailwind": "^6.0.2",
+    "@inquirer/confirm": "^4.0.5",
+    "@inquirer/input": "^3.1.0",
+    "@inquirer/select": "^5.2.1",
     "@inkjs/ui": "^2.0.0",
+    "@types/archiver": "^6.0.3",
+    "@types/chalk": "^2.2.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/globby": "^13.2.3",
+    "@types/inquirer": "^9.0.7",
+    "@types/lru-cache": "^9.1.0",
+    "@types/node": "^20.14.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^18.2.18",
+    "@types/yoga-layout": "^1.9.2",
     "archiver": "^7.0.1",
     "astro": "^5.11.0",
     "chalk": "^5.4.1",
@@ -48,17 +63,19 @@
     "mime-types": "^2.1.35",
     "ora": "^8.0.1",
     "p-retry": "^6.2.0",
-    "react": "^19.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tailwindcss": "^3.4.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.5",
     "wait-port": "^1.0.4",
     "yaml": "^2.4.5",
-    "yoga-layout": "^3.2.1"
+    "yoga-layout": "^3.2.1",
+    "yoga-layout-prebuilt": "^1.10.0"
   },
   "devDependencies": {
-    "@types/node": "^20.14.0",
     "eslint": "^8.57.0",
-    "prettier": "^3.3.0",
-    "typescript": "^5.5.0"
+    "prettier": "^3.3.0"
   },
   "engines": {
     "node": ">=18.0.0"
