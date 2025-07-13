@@ -1,19 +1,67 @@
 import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import { EnhancedYogaLayoutEngine } from '../lib/EnhancedYogaLayoutEngine.js';
 
+// ESM compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * @typedef {Object} InitOptions
+ * @property {string} [theme] - Theme for the project
+ * @property {string} [author] - Author of the project
+ * @property {boolean} [typescript] - Whether to use TypeScript
+ */
+
+/**
+ * @typedef {Object} ProjectConfig
+ * @property {string} name - Project name
+ * @property {string} theme - Theme name
+ * @property {string} created - ISO timestamp of creation
+ * @property {Object} layout - Layout configuration
+ * @property {string} layout.type - Layout type (e.g., 'column')
+ * @property {Array} [layout.children] - Child elements
+ * @property {Array} files - Project files
+ * @property {Object} metadata - Project metadata
+ * @property {string} metadata.title - Project title
+ * @property {string} metadata.description - Project description
+ * @property {string} metadata.author - Project author
+ */
+
 // Container-style export for DI integration
+/**
+ * Create an init command function
+ * @param {Object} container - Dependency injection container
+ * @returns {Function} Init command function
+ */
 export function createInitCommand(container) {
   return async (name, options) => {
     return await initProject(name, options);
   };
 }
 
-export async function initProject(name, options) {
+/**
+ * Initialize a new submitit project
+ * @param {string} name - Project name
+ * @param {InitOptions} options - Initialization options
+ * @returns {Promise<void>}
+ */
+export async function initProject(name, options = {}) {
+  if (!name || typeof name !== 'string') {
+    throw new Error('Project name is required and must be a string');
+  }
+
   const projectPath = join(process.cwd(), name);
   
   try {
+    // Validate options
+    const validatedOptions = {
+      theme: options.theme || 'default',
+      author: options.author || process.env.USER || 'Unknown',
+      typescript: Boolean(options.typescript)
+    };
     console.log(chalk.green('🧘 Initializing new submitit project...'));
     
     // Create project directory
@@ -28,10 +76,10 @@ export async function initProject(name, options) {
     const layoutEngine = new EnhancedYogaLayoutEngine();
     await layoutEngine.initializeEngine();
     
-    // Create project configuration
+    /** @type {ProjectConfig} */
     const config = {
       name,
-      theme: options.theme || 'default',
+      theme: validatedOptions.theme,
       created: new Date().toISOString(),
       layout: {
         type: 'column',
@@ -41,7 +89,7 @@ export async function initProject(name, options) {
       metadata: {
         title: name,
         description: `${name} - Created with submitit`,
-        author: process.env.USER || 'Unknown'
+        author: validatedOptions.author
       }
     };
     
@@ -64,8 +112,10 @@ export async function initProject(name, options) {
     console.log(chalk.white('  3. submitit preview'));
     console.log(chalk.white('  4. submitit export'));
     
-  } catch (error) {
-    console.error(chalk.red('❌ Error initializing project:'), error.message);
+  } catch (/** @type {any} */ error) {
+    console.error(chalk.red('❌ Error initializing project:'), error?.message || 'Unknown error');
+    // @ts-ignore - stack is optional but commonly available
+    if (error?.stack) console.error(chalk.gray(error.stack));
     process.exit(1);
   }
 }

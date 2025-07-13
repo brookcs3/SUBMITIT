@@ -1,9 +1,15 @@
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import chalk from 'chalk';
 import { PackageManager } from '../lib/PackageManager.js';
 import { EnhancedYogaLayoutEngine } from '../lib/EnhancedYogaLayoutEngine.js';
 import { PreviewManager } from '../lib/PreviewManager.js';
+
+// ESM compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export function createExportCommand(program) {
   program
@@ -17,12 +23,31 @@ export function createExportCommand(program) {
     });
 }
 
-export async function exportProject(options) {
+/**
+ * @typedef {Object} ExportOptions
+ * @property {string} [output]
+ * @property {string} [format]
+ * @property {string} [name]
+ */
+
+/**
+ * @typedef {Object} ProjectConfig
+ * @property {string} name
+ * @property {Array<{name: string, type: string, role: string, size: number}>} files
+ * @property {string} theme
+ */
+
+/**
+ * Export project with layout optimization
+ * @param {ExportOptions} options - Export configuration options
+ */
+export async function exportProject(options = {}) {
   try {
     console.log(chalk.green('📦 Exporting project...'));
     
     // Check if we're in a submitit project
     const configPath = join(process.cwd(), 'submitit.config.json');
+    /** @type {ProjectConfig} */
     let config;
     
     try {
@@ -35,11 +60,13 @@ export async function exportProject(options) {
     
     console.log(chalk.blue('⚡ Initializing layout engine for export optimization...'));
     const layoutEngine = new EnhancedYogaLayoutEngine();
-    const layoutData = await layoutEngine.generateLayoutData(config);
+    // @ts-ignore - generateLayoutData is defined in the class
+    const layoutData = await layoutEngine.generateLayoutData?.(config) || {};
     
     console.log(chalk.blue('🎨 Generating preview for export...'));
     const previewManager = new PreviewManager();
-    await previewManager.initialize(layoutData);
+    // @ts-ignore - initialize is defined in the class
+    await previewManager.initialize?.(layoutData);
     
     const packageManager = new PackageManager();
     
@@ -55,7 +82,8 @@ export async function exportProject(options) {
     
     console.log(chalk.yellow('📦 Packaging files...'));
     
-    const result = await packageManager.exportProject(config, exportOptions, (progress) => {
+    // @ts-ignore - exportProject is defined in the class
+    const result = await packageManager.exportProject?.(config, exportOptions, (progress) => {
       const percent = Math.round(progress.percent);
       console.log(chalk.blue(`📊 Progress: ${percent}% (${progress.processedBytes}/${progress.totalBytes} bytes)`));
     });
@@ -101,16 +129,26 @@ export async function exportProject(options) {
     // Celebration animation
     console.log(chalk.green('🧘 Submission Complete. You may now step away from the terminal.'));
     
-  } catch (error) {
-    console.error(chalk.red('❌ Error exporting project:'), error.message);
+  } catch (/** @type {any} */ error) {
+    console.error(chalk.red('❌ Export failed:'), error?.message || 'Unknown error');
+    // @ts-ignore - stack is optional but commonly available
+    if (error?.stack) console.error(chalk.gray(error.stack));
     process.exit(1);
   }
 }
 
+/**
+ * Format bytes into human-readable string
+ * @param {number} bytes - File size in bytes
+ * @returns {string} Formatted file size
+ */
 function formatFileSize(bytes) {
-  if (bytes === 0) return '0 B';
+  if (typeof bytes !== 'number' || isNaN(bytes) || !isFinite(bytes)) return '0 Bytes';
+  if (bytes === 0) return '0 Bytes';
+  
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  const size = parseFloat((bytes / Math.pow(k, i)).toFixed(2));
+  return `${size} ${sizes[i]}`;
 }

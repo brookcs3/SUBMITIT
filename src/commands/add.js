@@ -1,20 +1,20 @@
 import { writeFile, copyFile, stat } from 'node:fs/promises';
-import { join, basename } from 'node:path';
+import { join, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import chalk from 'chalk';
 import { globby } from 'globby';
 import { EnhancedYogaLayoutEngine } from '../lib/EnhancedYogaLayoutEngine.js';
 import { SmartFileHandlerSimple } from '../lib/SmartFileHandlerSimple.js';
-import ProjectManager from '../core/ProjectManager.js';
+import { Logger } from '../lib/Logger.js';
 import SmartFileHandler from '../ninja/SmartFileHandler.js';
 import IncrementalYogaDiffing from '../ninja/IncrementalYogaDiffing.js';
 import PreviewManager from '../core/PreviewManager.js';
 
 // Get directory name for ESM
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const __dirname = dirname(__filename);
 
-// Type imports
+// Type imports - using module path as declared in types.d.ts
 /** @typedef {import('../types').FileInfo} FileInfo */
 /** @typedef {import('../types').ProjectConfig} ProjectConfig */
 /** @typedef {import('../types').ProcessingResult} ProcessingResult */
@@ -24,28 +24,44 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 /** @typedef {import('../types/smart-file-handler').ProcessFilesResult} ProcessFilesResult */
 
 /**
- * @param {string[]} files
- * @param {AddOptions} options
+ * Adds content to the project with semantic role detection
+ * @param {string[]} files - Array of file paths to add
+ * @param {AddOptions} [options={}] - Options for adding content
+ * @returns {Promise<void>}
+ * @throws {Error} If there's an error adding content
  */
 export async function addContent(files, options = {}) {
   try {
     console.log(chalk.green('🚀 Adding content with semantic role detection...'));
     
     // Initialize project manager
-    const projectManager = new ProjectManager();
+      const projectManager = new ProjectManager();
     const smartHandler = new SmartFileHandler();
     const yogaDiffing = new IncrementalYogaDiffing();
     const previewManager = new PreviewManager();
     
-    // Initialize systems
-    await Promise.all([
-      projectManager.initializeProject('./'),
-      smartHandler.initialize(),
-      yogaDiffing.initializeEngine(),
-      previewManager.initialize('./')
-    ]);
-    
-    const config = projectManager.config;
+    // Initialize systems with proper error handling
+    try {
+      await Promise.all([
+        projectManager.initializeProject('./').catch(err => {
+          console.error(chalk.red('❌ Failed to initialize project:'), err.message);
+          throw err;
+        }),
+        smartHandler.initialize().catch(err => {
+          console.error(chalk.red('❌ Failed to initialize SmartFileHandler:'), err.message);
+          throw err;
+        }),
+        yogaDiffing.initializeEngine().catch(err => {
+          console.error(chalk.red('❌ Failed to initialize Yoga engine:'), err.message);
+          throw err;
+        }),
+        previewManager.initialize('./').catch(err => {
+          console.error(chalk.red('❌ Failed to initialize PreviewManager:'), err.message);
+          throw err;
+        })
+      ]);
+
+      const config = projectManager.config || {};
     console.log(chalk.cyan(`📋 Project: ${config.name} (${config.theme} theme)`));
     
     // Expand glob patterns
@@ -101,7 +117,7 @@ export async function addContent(files, options = {}) {
         }
         
       } catch (/** @type {any} */ error) {
-        console.error(chalk.red(`❌ Error adding ${fileName}:`, error?.message || 'Unknown error'));
+        console.error(chalk.red(`❌ Error adding ${fileName}:`), error?.message || 'Unknown error');
       }
     }
     
@@ -276,15 +292,20 @@ export async function addContent(files, options = {}) {
       console.log('Project Stats:', roleStats);
     }
     
-  } catch (/** @type {any} */ error) {
-    console.error(chalk.red('❌ Error adding content:'), error?.message || 'Unknown error');
-    process.exit(1);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(chalk.red('❌ Error adding content:'), errorMessage);
+    if (error instanceof Error && error.stack) {
+      console.error(chalk.gray(error.stack));
+    }
+    throw error;
   }
 }
 
 /**
- * @param {string} extension
- * @returns {string}
+ * Determines the file type based on the extension
+ * @param {string} extension - File extension (with or without dot)
+ * @returns {string} File type category (image, video, document, etc.)
  */
 function getFileType(extension) {
   const types = {
@@ -320,7 +341,7 @@ function getDefaultRole(type) {
     'audio': 'media',
     'video': 'media'
   };
-  
+
   return roles[type] || 'content';
 }
 
@@ -341,23 +362,23 @@ function formatFileSize(bytes) {
  */
 async function updateLayoutWithYoga(config) {
   const layoutPath = join(process.cwd(), 'layout.json');
-  
+
   // Initialize Yoga layout engine
   const layoutEngine = new EnhancedYogaLayoutEngine();
-  
+
   console.log(chalk.blue('🧘 Calculating optimal layout with Yoga...'));
-  
+
   // Calculate layout using Yoga
   const layout = await layoutEngine.calculateLayout(1200, 800);
-  
+
   if (layout) {
     // Save the generated layout
-    await writeFile(layoutPath, JSON.stringify({ 
+    await writeFile(layoutPath, JSON.stringify({
       layout: layout,
       generated: Date.now(),
       engine: 'yoga'
     }, null, 2));
-    
+
     console.log(chalk.green('✅ Layout optimized using Yoga flexbox engine'));
   } else {
     console.log(chalk.yellow('⚠️  No layout generated'));
@@ -365,47 +386,49 @@ async function updateLayoutWithYoga(config) {
 }
 
 /**
- * @param {ProjectConfig} _config
- * @param {string[]} addedFiles
+ * Processes files using the SmartFileHandler
+ * @param {string[]} addedFiles - Array of file paths to process
+ * @returns {Promise<ProcessFilesResult>} Processing results
+ * @throws {Error} If processing fails
  */
-async function processFilesWithSmartHandler(_config, addedFiles) {
+async function processFilesWithSmartHandler(addedFiles) {
   console.log(chalk.yellow('[CONDUCTOR] Initializing file orchestration...'));
-  
+
   const smartHandler = new SmartFileHandlerSimple();
-  
+
   // Convert added files to format expected by SmartFileHandler
   const fileObjects = addedFiles.map(fileName => ({
     path: join(process.cwd(), 'content', fileName),
     name: fileName
   }));
-  
+
   console.log(chalk.yellow('[CONDUCTOR] Mapping content symphony...'));
   const startTime = Date.now();
-  
+
   // Process files with incremental change detection
   const results = await smartHandler.processFiles(fileObjects, {
     incremental: true,
     cache: true,
     analysis: true
   });
-  
+
   const processingTime = Date.now() - startTime;
-  
+
   // Report processing results
   console.log(chalk.green(`[CONDUCTOR] Orchestrated ${results.length} files in ${processingTime}ms`));
-  
+
   // Show processing insights
   const successful = results.filter(r => r.success).length;
   const failed = results.filter(r => !r.success).length;
-  
+
   if (successful > 0) {
     console.log(chalk.green(`🚀 ${successful} files processed successfully`));
   }
-  
+
   if (failed > 0) {
     console.log(chalk.red(`❌ ${failed} files failed processing`));
   }
-  
+
   // Show file type breakdown
   const typeBreakdown = results.reduce((acc, result) => {
     if (result.type) {
@@ -413,12 +436,12 @@ async function processFilesWithSmartHandler(_config, addedFiles) {
     }
     return acc;
   }, {});
-  
+
   console.log(chalk.cyan('📊 File type analysis:'));
   Object.entries(typeBreakdown).forEach(([type, count]) => {
     console.log(chalk.gray(`   ${type}: ${count} files`));
   });
-  
+
   // Performance stats
   const stats = smartHandler.getPerformanceStats();
   console.log(chalk.gray(`💾 Cache: ${stats.cacheSize} entries, Dependencies: ${stats.dependencyGraphSize} mappings`));
@@ -436,7 +459,7 @@ function getDefaultWidth(type) {
     'audio': '400px',
     'video': '800px'
   };
-  
+
   return widths[type] || '100%';
 }
 
@@ -499,8 +522,31 @@ function getLayoutWidth(role) {
  * @param {any} container
  * @returns {(files: string[], options: AddOptions) => Promise<void>}
  */
-export function createAddCommand(container) {
-  return async (files, options) => {
-    return await addContent(files, options);
+export /**
+ * Creates an add command function with dependency injection
+ * @param {Object} container - Dependency injection container
+ * @returns {(files: string[], options: AddOptions) => Promise<void>} The add command function
+ */
+function createAddCommand(container) {
+  return async function addCommand(files = [], options = {}) {
+    if (!Array.isArray(files) || files.length === 0) {
+      throw new Error('No files specified to add');
+    }
+    
+    try {
+      await addContent(files, options);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(chalk.red('❌ Add command failed:'), errorMessage);
+      if (error instanceof Error && error.stack) {
+        console.error(chalk.gray(error.stack));
+      }
+    }
   };
 }
+
+// Export the command function
+export default createAddCommand({});
+
+// Named exports for testing and other modules
+export { createAddCommand };
