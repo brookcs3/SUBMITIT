@@ -1,6 +1,18 @@
 // Type definitions for AdvancedTerminalDetector
 declare module '../lib/AdvancedTerminalDetector' {
-  interface TerminalCapabilities {
+  // Re-export types for external use
+  export interface TerminalDimensions {
+    columns: number;
+    rows: number;
+  }
+
+  export interface TerminalDetectionOptions {
+    enableCapabilityDetection?: boolean;
+    enableRealTimeMonitoring?: boolean;
+    detectionInterval?: number;
+  }
+  
+  export interface TerminalCapabilities {
     colors: {
       depth: number;
       trueColor: boolean;
@@ -46,7 +58,7 @@ declare module '../lib/AdvancedTerminalDetector' {
     tier: string;
   }
 
-  interface TerminalLayout {
+  export interface TerminalLayout {
     factor: number;
     columns: number;
     rows: number;
@@ -55,7 +67,7 @@ declare module '../lib/AdvancedTerminalDetector' {
     recommendation: string;
   }
 
-  interface TerminalRecommendations {
+  export interface TerminalRecommendations {
     layout: TerminalLayout;
     typography: {
       charWidth: number;
@@ -89,12 +101,12 @@ declare module '../lib/AdvancedTerminalDetector' {
     };
   }
 
-  interface TerminalDetectionResult {
+  export interface TerminalDetectionResult {
     capabilities: TerminalCapabilities;
     recommendations: TerminalRecommendations;
   }
 
-  class AdvancedTerminalDetector {
+  export class AdvancedTerminalDetector {
     static detect(): Promise<TerminalDetectionResult>;
     static getCapabilities(): TerminalCapabilities;
     static getRecommendations(capabilities: TerminalCapabilities): TerminalRecommendations;

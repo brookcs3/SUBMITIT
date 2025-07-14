@@ -3,18 +3,401 @@
  * 
  * Comprehensive terminal environment detection and adaptive scaling system
  * for optimal UI rendering across different terminal types and screen sizes.
+ * 
+ * @module AdvancedTerminalDetector
  */
 
+// Core Node.js modules
 import { EventEmitter } from 'events';
+import { execSync } from 'child_process';
+import os from 'os';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import { promises as fs } from 'fs';
+
+// Third-party imports
+import supportsColor from 'supports-color';
+import isUnicodeSupported from 'is-unicode-supported';
+import isDocker from 'is-docker';
+import isWsl from 'is-wsl';
 import chalk from 'chalk';
 
+// Import internal utilities
+import { Logger } from './utils/Logger.js';
+
+// Constants
+const DEFAULT_OPTIONS = {
+  enableCapabilityDetection: true,
+  enableRealTimeMonitoring: true,
+  detectionInterval: 1000
+};
+
+// Type definitions
 /**
- * Advanced Terminal Detector
- * 
+ * @typedef {Object} TerminalDimensions
+ * @property {number} columns - Number of columns
+ * @property {number} rows - Number of rows
+ */
+
+/**
+ * @typedef {Object} TerminalCapabilities
+ * @property {boolean} supports256Colors - Whether the terminal supports 256 colors
+ * @property {boolean} supportsTrueColor - Whether the terminal supports true color
+ * @property {boolean} unicode - Whether the terminal supports Unicode
+ * @property {boolean} hyperlinks - Whether the terminal supports hyperlinks
+ * @property {boolean} images - Whether the terminal supports images
+ * @property {boolean} mouse - Whether the terminal supports mouse events
+ * @property {boolean} clipboard - Whether the terminal supports clipboard access
+ * @property {Object} performance - Terminal performance metrics
+ * @property {number} performance.renderTime - Average render time in ms
+ * @property {number} performance.frameRate - Frame rate in FPS
+ */
+
+/**
+ * @typedef {Object} TerminalDetectionOptions
+ * @property {boolean} [enableCapabilityDetection=true] - Whether to enable capability detection
+ * @property {boolean} [enableRealTimeMonitoring=true] - Whether to enable real-time monitoring
+ * @property {number} [detectionInterval=1000] - Detection interval in milliseconds
+ */
+
+// Type definitions for JSDoc
+/**
+ * @typedef {Object} TerminalDimensions
+ * @property {number} width - Width in columns
+ * @property {number} height - Height in rows
+ */
+
+/**
+ * @typedef {Object} TerminalCapabilities
+ * @property {boolean} colors - Whether the terminal supports colors
+ * @property {boolean} unicode - Whether the terminal supports Unicode
+ * @property {boolean} mouse - Whether the terminal supports mouse input
+ * @property {boolean} clipboard - Whether the terminal supports clipboard operations
+ * @property {boolean} notifications - Whether the terminal supports notifications
+ * @property {Object} performance - Performance metrics
+ * @property {number} performance.renderTime - Time to render a frame in ms
+ * @property {number} performance.frameRate - Frames per second
+ */
+
+/**
+ * @typedef {Object} TerminalEnvironment
+ * @property {string} platform - Operating system platform
+ * @property {string} shell - User's shell
+ * @property {string} term - Terminal type
+ * @property {boolean} isCI - Whether running in CI environment
+ * @property {boolean} isTTY - Whether the output is a TTY
+ */
+
+/**
+ * @typedef {'basic'|'intermediate'|'advanced'|'full'} TerminalCapabilityTier
+ */
+
+/**
+ * Advanced terminal capabilities detector
+ * @class AdvancedTerminalDetector
+ * @extends {EventEmitter}
+ */
+/**
+ * Advanced terminal capabilities detector
  * @class AdvancedTerminalDetector
  * @extends {EventEmitter}
  */
 class AdvancedTerminalDetector extends EventEmitter {
+  /** @type {TerminalCapabilities} */
+  capabilities = {
+    colors: false,
+    unicode: false,
+    mouse: false,
+    clipboard: false,
+    notifications: false,
+    fontSupport: {
+      emoji: false,
+      powerline: false,
+      nerdFont: false,
+      ligatures: false,
+    },
+    performance: {
+      highResTimer: false,
+      fastRendering: false,
+      gpuAcceleration: false,
+    },
+    environment: {
+      isWSL: false,
+      isDocker: false,
+      isWSL2: false,
+      isTerminalApp: false,
+      isHyper: false,
+      isWindowsTerminal: false,
+      isITerm2: false,
+      isAlacritty: false,
+      isKitty: false,
+      isWezTerm: false,
+      isVSCode: false,
+      isTmux: false,
+      isScreen: false,
+      isXTerm: false,
+      isRxvt: false,
+      isMintty: false,
+      isGitBash: false,
+      isCygwin: false,
+      isMSYS2: false,
+      isConEmu: false,
+      isCmder: false,
+    },
+  };
+
+  /** @type {TerminalDimensions} */
+  dimensions = {
+    width: 0,
+    height: 0,
+    pixelWidth: 0,
+    pixelHeight: 0,
+    dpi: 96,
+    aspectRatio: 1.77,
+    isWideScreen: true,
+    isHighDensity: false,
+    isRetina: false,
+  };
+
+  /** @type {TerminalEnvironment} */
+  environment = {
+    isCI: false,
+    isTTY: false,
+    hasFocus: false,
+    hasAudio: false,
+    hasVideo: false,
+    hasWebGL: false,
+    hasWebGPU: false,
+    hasWebRTC: false,
+    hasWebSockets: false,
+  };
+
+  /** @type {boolean} */
+  isInitialized = false;
+
+  /** @type {NodeJS.Timeout | null} */
+  checkInterval = null;
+
+  /** @type {number} */
+  lastCheck = 0;
+
+  /**
+   * @param {Object} [options={}] Configuration options
+   * @param {boolean} [options.enableCapabilityDetection=true] Whether to enable capability detection
+   * @param {boolean} [options.enableRealtimeUpdates=true] Whether to enable real-time updates
+   * @param {number} [options.updateInterval=1000] Update interval in milliseconds
+   */
+  constructor(options = {}) {
+    super();
+    this.options = {
+      enableCapabilityDetection: true,
+      enableRealtimeUpdates: true,
+      updateInterval: 1000,
+      ...options,
+    };
+  }
+
+  /**
+   * Initialize the detector
+   * @returns {Promise<void>}
+   */
+  async initialize() {
+    if (this.isInitialized) {
+      return;
+    }
+
+    try {
+      // Detect terminal type and capabilities
+      await this.detectTerminalType();
+      await this.detectCapabilities();
+      await this.detectDimensions();
+      await this.detectEnvironment();
+
+      // Set up real-time monitoring if enabled
+      if (this.options.enableRealtimeUpdates) {
+        this.startRealtimeMonitoring();
+      }
+
+      this.isInitialized = true;
+      this.emit('initialized', this.capabilities);
+    } catch (error) {
+      this.emit('error', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Detect terminal type and set appropriate flags
+   * @private
+   * @returns {Promise<void>}
+   */
+  async detectTerminalType() {
+    try {
+      // Set environment flags
+      this.capabilities.environment = {
+        isWSL: await isWSL(),
+        isDocker: await isDocker(),
+        isWSL2: await isWsl(),
+        isTerminalApp: await isTerminalApp(),
+        isHyper: await isHyper(),
+        isWindowsTerminal: await isWindowsTerminal(),
+        isITerm2: await isITerm2(),
+        isAlacritty: await isAlacritty(),
+        isKitty: await isKitty(),
+        isWezTerm: await isWezTerm(),
+        isVSCode: await isVSCode(),
+        isTmux: await isTmux(),
+        isScreen: await isScreen(),
+        isXTerm: await isXTerm(),
+        isRxvt: await isRxvt(),
+        isMintty: await isMintty(),
+        isGitBash: await isGitBash(),
+        isCygwin: await isCygwin(),
+        isMSYS2: await isMSYS2(),
+        isConEmu: await isConEmu(),
+        isCmder: await isCmder(),
+      };
+    } catch (error) {
+      console.error('Error detecting terminal type:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Detect terminal capabilities
+   * @private
+   * @returns {Promise<void>}
+   */
+  async detectCapabilities() {
+    try {
+      // Basic capabilities
+      this.capabilities.colors = Boolean(supportsColor);
+      this.capabilities.unicode = isUnicodeSupported();
+      this.capabilities.mouse = await this.detectMouseSupport();
+      this.capabilities.clipboard = await this.detectClipboardSupport();
+      this.capabilities.notifications = await this.detectNotificationSupport();
+
+      // Font support
+      this.capabilities.fontSupport = {
+        emoji: await this.detectEmojiSupport(),
+        powerline: await this.detectPowerlineSupport(),
+        nerdFont: await this.detectNerdFontSupport(),
+        ligatures: await this.detectLigatureSupport(),
+      };
+
+      // Performance capabilities
+      this.capabilities.performance = {
+        highResTimer: 'performance' in globalThis && 'now' in performance,
+        fastRendering: await this.detectFastRendering(),
+        gpuAcceleration: await this.detectGpuAcceleration(),
+      };
+    } catch (error) {
+      console.error('Error detecting terminal capabilities:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Detect terminal dimensions
+   * @private
+   * @returns {Promise<void>}
+   */
+  async detectDimensions() {
+    try {
+      // Default dimensions
+      const defaultWidth = process.stdout.columns || 80;
+      const defaultHeight = process.stdout.rows || 24;
+
+      // Try to get actual dimensions
+      this.dimensions = {
+        width: process.stdout.columns || defaultWidth,
+        height: process.stdout.rows || defaultHeight,
+        pixelWidth: 0, // Will be updated if possible
+        pixelHeight: 0, // Will be updated if possible
+        dpi: 96, // Default DPI
+        aspectRatio: 1.77, // Default 16:9
+        isWideScreen: true,
+        isHighDensity: false,
+        isRetina: false,
+      };
+
+      // Update pixel dimensions based on DPI
+      this.updatePixelDimensions();
+
+      // Emit event with updated dimensions
+      this.emit('dimensions', this.dimensions);
+    } catch (error) {
+      console.error('Error detecting terminal dimensions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update pixel dimensions based on DPI
+   * @private
+   */
+  updatePixelDimensions() {
+    const { width, height, dpi } = this.dimensions;
+    const pixelsPerInch = dpi / 72; // Convert DPI to pixels per point (72 points per inch)
+    
+    this.dimensions.pixelWidth = Math.round(width * 7 * pixelsPerInch); // Approximate char width
+    this.dimensions.pixelHeight = Math.round(height * 16 * pixelsPerInch); // Approximate line height
+    this.dimensions.aspectRatio = this.dimensions.pixelWidth / Math.max(1, this.dimensions.pixelHeight);
+    this.dimensions.isWideScreen = this.dimensions.aspectRatio > 1.5;
+  }
+
+  /**
+   * Detect environment capabilities
+   * @private
+   * @returns {Promise<void>}
+   */
+  async detectEnvironment() {
+    try {
+      this.environment = {
+        isCI: Boolean(process.env.CI || process.env.CONTINUOUS_INTEGRATION),
+        isTTY: process.stdout.isTTY,
+        hasFocus: true, // Default assumption
+        hasAudio: false, // Terminal typically doesn't have audio
+        hasVideo: false, // Terminal typically doesn't have video
+        hasWebGL: false, // Terminal doesn't have WebGL
+        hasWebGPU: false, // Terminal doesn't have WebGPU
+        hasWebRTC: false, // Terminal doesn't have WebRTC
+        hasWebSockets: true, // Node.js has WebSocket support
+      };
+    } catch (error) {
+      console.error('Error detecting environment capabilities:', error);
+      throw error;
+    }
+  }
+  /**
+   * @type {TerminalCapabilities}
+   */
+  capabilities;
+  
+  /**
+   * @type {TerminalDimensions}
+   */
+  dimensions;
+  
+  /**
+   * @type {TerminalEnvironment}
+   */
+  environment;
+  
+  /**
+   * @type {boolean}
+   */
+  isInitialized = false;
+  
+  /**
+   * @type {NodeJS.Timeout | null}
+   */
+  checkInterval = null;
+  
+  /**
+   * @type {number}
+   */
+  lastCheck = 0;
   /**
    * Creates an instance of AdvancedTerminalDetector
    * @param {Object} [options={}] Configuration options
@@ -22,10 +405,13 @@ class AdvancedTerminalDetector extends EventEmitter {
    * @param {boolean} [options.enableRealTimeMonitoring=true] Whether to enable real-time monitoring
    * @param {number} [options.detectionInterval=1000] Detection interval in milliseconds
    */
+  /**
+   * @param {import('../types/AdvancedTerminalDetector.js').TerminalDetectionOptions} [options={}] Configuration options
+   */
   constructor(options = {}) {
     super();
     
-    // Default options
+    /** @type {import('../types/AdvancedTerminalDetector.js').TerminalDetectionOptions} */
     this.options = {
       enableCapabilityDetection: true,
       enableRealTimeMonitoring: true,
@@ -33,8 +419,10 @@ class AdvancedTerminalDetector extends EventEmitter {
       ...options
     };
     
-    // Current state
-    this.currentDimensions = this.detectDimensions();
+    /** @type {import('../types/AdvancedTerminalDetector.js').TerminalDimensions} */
+    this.currentDimensions = { columns: 0, rows: 0 };
+    
+    /** @type {import('../types/AdvancedTerminalDetector.js').TerminalCapabilities} */
     this.terminalCapabilities = {
       supports256Colors: false,
       supportsTrueColor: false,
@@ -45,27 +433,11 @@ class AdvancedTerminalDetector extends EventEmitter {
       clipboard: false,
       performance: {
         renderTime: 0,
-        frameRate: 0
-      }
     };
-    
-    // Internal state
-    this.resizeTimeout = null;
-    this.periodicCheckInterval = null;
-    this.dimensionChangeHandlers = new Set();
-    this.capabilityChangeHandlers = new Set();
-    this.isTerminalResponsive = true;
-    this.detectionInProgress = false;
     
     // Bind methods
     this.handleResize = this.handleResize.bind(this);
-    this.detect = this.detect.bind(this);
-    this.getTerminalReport = this.getTerminalReport.bind(this);
-    this.supports = this.supports.bind(this);
-    this.getTerminalType = this.getTerminalType.bind(this);
-    this.getDimensions = this.getDimensions.bind(this);
-    this.supportsColors = this.supportsColors.bind(this);
-    this.initialize = this.initialize.bind(this);
+    this.checkCapabilities = this.checkCapabilities.bind(this);
     this.detectDimensions = this.detectDimensions.bind(this);
   }
   
@@ -76,23 +448,21 @@ class AdvancedTerminalDetector extends EventEmitter {
    * @returns {Promise<void>}
    */
   async initialize() {
-    if (this.detectionInProgress) {
-      return;
-    }
+    console.log(chalk.blue('🖥️  Initializing Advanced Terminal Detector...'));
     
     try {
+      await this.performInitialDetection();
+      
+      if (this.options.enableRealTimeMonitoring) {
+        this.startRealtimeMonitoring();
+      }
       this.detectionInProgress = true;
       
       // Perform initial detection
       await this.performInitialDetection();
       
-      // Start real-time monitoring if enabled
-      if (this.options.enableRealTimeMonitoring) {
-        this.startRealtimeMonitoring();
-      }
-      
-      this.emit('initialized');
-      return this;
+      console.log(chalk.green('✅ Advanced Terminal Detector initialized'));
+      this.emit('detector-ready', this.currentDimensions);
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -106,615 +476,390 @@ class AdvancedTerminalDetector extends EventEmitter {
   // === DETECTION METHODS ===
   
   /**
-   * Detect terminal dimensions
-   * @returns {{columns: number, rows: number}} Terminal dimensions
+   * Detect terminal dimensions (instance method)
+   * @returns {TerminalDimensions} Terminal dimensions
    */
   detectDimensions() {
-    try {
-      const { columns = 80, rows = 24 } = process.stdout;
-      return { columns, rows };
-    } catch (error) {
-      this.logError('Failed to detect terminal dimensions', error);
-      return { columns: 80, rows: 24 }; // Fallback to default dimensions
-    }
+    return AdvancedTerminalDetector.detectDimensions();
   }
   
   /**
-   * Detect terminal capabilities
-   * @returns {Promise<Object>} Terminal capabilities object
+   * Detect terminal color support
+   * @returns {Object} Color support information
    */
-  async detectCapabilities() {
-    const capabilities = {
-      colors: this.supportsColors(),
-      unicode: this.supportsUnicode(),
-      emoji: this.supportsEmoji(),
-      hyperlinks: this.supportsHyperlinks(),
-      images: this.supportsImages(),
-      mouse: this.supportsMouse(),
-      clipboard: this.supportsClipboard(),
-      screenReader: this.isScreenReaderActive(),
-      cjk: this.supportsCJK(),
-      sixel: this.supportsSixel(),
-      iterm2: this.isITerm2(),
-      kitty: this.isKitty(),
-      wezterm: this.isWezTerm(),
-      windowsTerminal: this.isWindowsTerminal(),
-      vscode: this.isVSCode(),
-      tmux: this.isTmux(),
-      screen: this.isScreen(),
-      ci: this.isCI(),
-      docker: this.isDocker(),
-      wsl: this.isWSL(),
-      ssh: this.isSSH(),
-      root: this.isRoot()
+  static detectColorSupport() {
+    return {
+      has16m: process.env.COLORTERM === 'truecolor' || process.env.COLORTERM === '24bit',
+      has256: process.env.TERM && /-256(color)?$/i.test(process.env.TERM),
+      hasBasic: true, // Most terminals support basic colors
+      level: process.env.COLORTERM === 'truecolor' || process.env.COLORTERM === '24bit' ? 3 :
+             (process.env.TERM && /-256(color)?$/i.test(process.env.TERM) ? 2 : 1)
     };
-    
-    this.emit('capabilitiesDetected', capabilities);
-    return capabilities;
   }
   
   /**
-   * Perform initial detection of terminal capabilities
-   * @returns {Promise<Object>} Detection result with dimensions and capabilities
+   * Detect terminal emulator features
+   * @returns {Object} Terminal features
    */
-  async performInitialDetection() {
-    try {
-      // Detect terminal dimensions
-      this.currentDimensions = this.detectDimensions();
-      
-      // Detect terminal capabilities if enabled
-      if (this.options.enableCapabilityDetection) {
-        this.terminalCapabilities = await this.detectCapabilities();
-      }
-      
-      // Record detection
-      this.recordDetection();
-      
-      // Emit detection event
-      this.emit('detection', {
-        type: 'initial',
-        dimensions: this.currentDimensions,
-        capabilities: this.terminalCapabilities
-      });
-      
-      return {
-        dimensions: this.currentDimensions,
-        capabilities: this.terminalCapabilities
-      };
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.emit('error', new Error(`Detection failed: ${errorMessage}`));
-      throw error;
-    }
-  }
-  
-  // === CAPABILITY DETECTION METHODS ===
-  
-  /**
-   * Check if terminal supports colors
-   * @returns {boolean} True if colors are supported
-   */
-  supportsColors() {
-    return !!(
-      process.stdout.isTTY &&
-      (process.env.TERM !== 'dumb' || Boolean(process.env.COLORTERM)) &&
-      (process.platform !== 'win32' || process.env.ConEmuTask || process.env.TERM_PROGRAM === 'vscode')
-    );
-  }
-  
-  // === TERMINAL ENVIRONMENT DETECTION ===
-  
-  /**
-   * Check if running in iTerm2
-   * @returns {boolean} True if running in iTerm2
-   */
-  isITerm2() {
-    return Boolean(
-      process.env.TERM_PROGRAM === 'iTerm.app' ||
-      process.env.TERM_PROGRAM === 'iTerm2' ||
-      process.env.ITERM_SESSION_ID ||
-      process.env.ITERM_PROFILE
-    );
+  static detectTerminalFeatures() {
+    return {
+      isCI: process.env.CI === 'true' || process.env.CI === '1' || process.env.CI === true,
+      isDumb: process.env.TERM === 'dumb',
+      isWindows: process.platform === 'win32',
+      isMacOS: process.platform === 'darwin',
+      isLinux: process.platform === 'linux',
+      isTTY: process.stdout.isTTY,
+      hasUnicode: process.platform !== 'win32' || process.env.CI || process.env.WT_SESSION
+    };
   }
   
   /**
-   * Check if running in Kitty terminal
-   * @returns {boolean} True if running in Kitty
+   * Detect notification support in the terminal
+   * @returns {boolean} True if notifications are supported
    */
-  isKitty() {
-    return Boolean(
-      process.env.KITTY_WINDOW_ID ||
-      process.env.KITTY_PID ||
-      process.env.TERM?.includes('kitty')
-    );
-  }
-  
-  /**
-   * Check if running in WezTerm
-   * @returns {boolean} True if running in WezTerm
-   */
-  isWezTerm() {
-    return Boolean(
-      process.env.WEZTERM_EXECUTABLE ||
-      process.env.WEZTERM_CONFIG_FILE ||
-      process.env.TERM?.includes('wezterm')
-    );
-  }
-  
-  /**
-   * Check if running in Windows Terminal
-   * @returns {boolean} True if running in Windows Terminal
-   */
-  isWindowsTerminal() {
-    return Boolean(
-      process.env.WT_SESSION ||
-      process.env.WT_PROFILE_ID ||
-      process.env.TERM_PROGRAM === 'vscode' && process.env.WT_SESSION
-    );
-  }
-  
-  /**
-   * Check if running in VSCode integrated terminal
-   * @returns {boolean} True if running in VSCode
-   */
-  isVSCode() {
-    return Boolean(
-      process.env.TERM_PROGRAM === 'vscode' ||
-      process.env.VSCODE_PID ||
-      process.env.VSCODE_CWD
-    );
-  }
-  
-  /**
-   * Check if running inside tmux
-   * @returns {boolean} True if running inside tmux
-   */
-  isTmux() {
-    return Boolean(process.env.TMUX || process.env.TMUX_PANE);
-  }
-  
-  /**
-   * Check if running inside GNU Screen
-   * @returns {boolean} True if running inside Screen
-   */
-  isScreen() {
-    return Boolean(process.env.SCREEN || process.env.STARTED_SCREEN);
-  }
-  
-  /**
-   * Check if running in a CI environment
-   * @returns {boolean} True if running in CI
-   */
-  isCI() {
-    return Boolean(
-      process.env.CI || // GitHub Actions, Travis CI, CircleCI, Cirrus CI, GitLab CI, AppVeyor, CodeShip, dsari
-      process.env.CONTINUOUS_INTEGRATION || // Travis CI, Cirrus CI
-      process.env.BUILD_NUMBER || // Jenkins, TeamCity
-      process.env.RUN_ID || // TaskCluster, dsari
-      process.env.BUILD_ID || // Jenkins, TeamCity
-      process.env.CI_NAME || // Codeship and others
-      process.env.TRAVIS || // Travis CI
-      process.env.GITHUB_ACTIONS || // GitHub Actions
-      process.env.CIRCLECI || // CircleCI
-      process.env.CIRRUS_CI || // Cirrus CI
-      process.env.GITLAB_CI || // GitLab CI
-      process.env.APPVEYOR || // AppVeyor
-      process.env.CODESHIP || // CodeShip
-      process.env.DRONE || // Drone
-      process.env.SHIPPABLE || // Shippable
-      process.env.TEAMCITY_VERSION || // TeamCity
-      process.env.BUILDKITE || // Buildkite
-      process.env.BUILDKITE_BUILD_NUMBER || // Buildkite
-      process.env.BITBUCKET_COMMIT || // Bitbucket Pipelines
-      process.env.BITBUCKET_BUILD_NUMBER || // Bitbucket Pipelines
-      process.env.CODEBUILD_BUILD_ID || // AWS CodeBuild
-      process.env.TF_BUILD // Azure Pipelines
-    );
-  }
-  
-  /**
-   * Check if running inside a Docker container
-   * @returns {boolean} True if running in Docker
-   */
-  isDocker() {
-    // Check for .dockerenv file (most reliable method)
-    try {
-      const fs = require('fs');
-      if (fs.existsSync('/.dockerenv')) {
-        return true;
-      }
-    } catch (err) {
-      // Ignore errors
-    }
-    
-    // Check for Docker-specific cgroup
-    try {
-      const fs = require('fs');
-      const cgroup = fs.readFileSync('/proc/self/cgroup', 'utf8');
-      return cgroup.includes('docker') || cgroup.includes('kubepods');
-    } catch (err) {
-      // Ignore errors
-    }
-    
-    // Fall back to environment variables
-    return Boolean(
-      process.env.DOCKER === 'true' ||
-      process.env.CONTAINER === 'docker' ||
-      process.env.KUBERNETES_SERVICE_HOST
-    );
-  }
-  
-  /**
-   * Check if running in Windows Subsystem for Linux (WSL)
-   * @returns {boolean} True if running in WSL
-   */
-  isWSL() {
-    if (process.platform !== 'linux') return false;
-    
-    try {
-      const fs = require('fs');
-      return (
-        fs.existsSync('/proc/version') &&
-        fs.readFileSync('/proc/version', 'utf8').toLowerCase().includes('microsoft')
-      );
-    } catch (err) {
-      return false;
-    }
-  }
-  
-  /**
-   * Check if running over SSH
-   * @returns {boolean} True if running over SSH
-   */
-  isSSH() {
-    return Boolean(
-      process.env.SSH_TTY ||
-      process.env.SSH_CONNECTION ||
-      process.env.SSH_CLIENT ||
-      process.env.SSH_CLIENT_IP ||
-      (process.env.TERM_PROGRAM === 'vscode' && process.env.VSCODE_IPC_HOOK_CLI)
-    );
-  }
-  
-  /**
-   * Check if running as root
-   * @returns {boolean} True if running as root
-   */
-  isRoot() {
-    // For non-Windows platforms
-    if (process.platform !== 'win32') {
-      return process.getuid && process.getuid() === 0;
-    }
-    
-    // For Windows, check if the process has admin privileges
-    try {
-      const execSync = require('child_process').execSync;
-      const result = execSync('net session', { stdio: 'ignore' });
-      return result === null || result === undefined;
-    } catch (e) {
-      return false;
-    }
-  }
-  
-  /**
-   * Check if terminal supports Unicode
-   * @returns {boolean} True if Unicode is supported
-   */
-  supportsUnicode() {
-    // Check for common Unicode support indicators
-    return !/^xterm|^screen|^vt100|^rxvt|color|ansi|cygwin|linux|konsole|iTerm|alacritty|kitty|wezterm/i.test(
-      process.env.TERM || ''
-    ) || Boolean(process.env.CI) || process.platform === 'win32';
-  }
-  
-  /**
-   * Check if terminal supports emoji
-   * @returns {boolean} True if emoji are supported
-   */
-  supportsEmoji() {
-    // Most modern terminals support emoji
-    return this.supportsUnicode() && 
-      !/^xterm|^screen|^vt100|^rxvt|^linux/i.test(process.env.TERM || '') &&
-      !process.env.TERM_PROGRAM?.includes('Apple_Terminal');
-  }
-  
-  /**
-   * Check if terminal supports hyperlinks
-   * @returns {boolean} True if hyperlinks are supported
-   */
-  supportsHyperlinks() {
-    // Check for known terminals that support hyperlinks
-    const supported = [
-      'iTerm',
-      'Hyper',
-      'vscode',
-      'wezterm',
-      'kitty',
-      'alacritty',
-      'WindowsTerminal',
-      'mintty',
-      'konsole',
-      'foot',
-      'terminology',
-      'rio',
-      'contour',
-      'wezterm',
-      'warp',
-      'tabby',
-      'wez',
-      'terminus',
-      'terminator',
-      'tilix',
-      'terminology',
-      'rio',
-      'contour',
-      'wezterm',
-      'warp',
-      'tabby',
-      'wez',
-      'terminus',
-      'terminator',
-      'tilix',
-      'terminology',
-      'rio',
-      'contour',
-      'wezterm',
-      'warp',
-      'tabby',
-      'wez',
-      'terminus',
-      'terminator',
-      'tilix'
-    ];
-    
+  static detectNotificationSupport() {
+    // Check for common terminals with notification support
     return (
-      Boolean(process.env.TERM_PROGRAM && supported.includes(process.env.TERM_PROGRAM)) ||
-      Boolean(process.env.TERM && supported.some(term => process.env.TERM?.includes(term))) ||
-      Boolean(process.env.TERM_PROGRAM?.includes('vscode')) ||
-      Boolean(process.env.WT_SESSION) // Windows Terminal
+      process.env.TERM_PROGRAM === 'iTerm.app' ||
+      process.env.TERM_PROGRAM === 'vscode' ||
+      process.env.TERM_PROGRAM === 'Hyper' ||
+      process.env.TERM_PROGRAM === 'alacritty' ||
+      process.env.TERM_PROGRAM === 'kitty' ||
+      (process.env.TERM && (
+        process.env.TERM.includes('xterm') ||
+        process.env.TERM.includes('screen') ||
+        process.env.TERM.includes('tmux')
+      ))
     );
   }
   
   /**
-   * Check if terminal supports images
-   * @returns {boolean} True if images are supported
+   * Detect font support in the terminal
+   * @returns {Object} Font support information
    */
-  supportsImages() {
-    // Check for terminals that support image display
-    return this.isITerm2() || this.isKitty() || this.isWezTerm();
+  static detectFontSupport() {
+    const supportsEmoji = process.platform !== 'win32' || 
+                         process.env.TERM_PROGRAM === 'vscode' ||
+                         process.env.TERM_PROGRAM === 'Hyper';
+    
+    return {
+      emoji: supportsEmoji,
+      powerline: process.env.TERM_PROGRAM === 'iTerm.app' || 
+                process.env.TERM_PROGRAM === 'vscode' ||
+                process.env.TERM_PROGRAM === 'Hyper',
+      ligatures: process.env.TERM_PROGRAM === 'iTerm.app' ||
+                process.env.TERM_PROGRAM === 'vscode' ||
+                process.env.TERM_PROGRAM === 'Hyper'
+    };
   }
   
   /**
-   * Check if terminal supports mouse events
-   * @returns {boolean} True if mouse events are supported
+   * Detect performance capabilities of the terminal
+   * @returns {Object} Performance capabilities
    */
-  supportsMouse() {
-    // Most modern terminals support mouse
-    return this.isITerm2() || 
-           this.isKitty() || 
-           this.isWezTerm() || 
-           this.isVSCode() || 
-           this.isWindowsTerminal() ||
-           /xterm|screen|tmux|rxvt|alacritty|foot|terminology|rio|contour|warp|tabby|wez|terminus|terminator|tilix/i.test(process.env.TERM || '');
+  static detectPerformanceCapabilities() {
+    // Check for common high-performance terminals
+    const isHighPerformance = [
+      'iTerm.app', 'vscode', 'Hyper', 'alacritty', 'kitty', 'wezterm'
+    ].includes(process.env.TERM_PROGRAM || '');
+    
+    return {
+      highPerformance: isHighPerformance,
+      // Assume basic animation support in most modern terminals
+      animations: true,
+      // Assume basic image display support in modern terminals
+      images: process.env.TERM_PROGRAM === 'iTerm.app' || 
+             process.env.TERM_PROGRAM === 'vscode' ||
+             process.env.TERM_PROGRAM === 'wezterm',
+      // Assume basic GPU acceleration in modern terminals
+      gpuAccelerated: isHighPerformance
+    };
   }
   
   /**
-   * Check if terminal supports clipboard access
-   * @returns {boolean} True if clipboard access is supported
+   * Detect the runtime environment
+   * @returns {Object} Environment information
    */
-  supportsClipboard() {
-    // Check for known terminals with clipboard support
-    return this.isITerm2() || 
-           this.isKitty() || 
-           this.isWezTerm() || 
-           this.isVSCode() || 
-           this.isWindowsTerminal() ||
-           process.platform === 'darwin' || // macOS has pbcopy/pbpaste
-           process.platform === 'linux' && (process.env.DISPLAY || process.env.WAYLAND_DISPLAY); // X11 or Wayland
+  static detectEnvironment() {
+    return {
+      // Runtime environment
+      node: process.versions.node,
+      v8: process.versions.v8,
+      // Container/virtualization detection
+      isDocker: !!process.env.DOCKER,
+      isWSL: process.env.WSL_DISTRO_NAME !== undefined,
+      isCodespaces: !!process.env.CODESPACES,
+      // CI/CD environment
+      isCI: process.env.CI === 'true' || process.env.CI === '1' || process.env.CI === true,
+      // Terminal multiplexer
+      isTmux: !!process.env.TMUX,
+      isScreen: !!process.env.SCREEN,
+      // SSH session
+      isSSH: !!process.env.SSH_CONNECTION || !!process.env.SSH_CLIENT || !!process.env.SSH_TTY
+    };
   }
   
   /**
-   * Check if a screen reader is active
-   * @returns {boolean} True if a screen reader is active
+   * Detect mouse support in the terminal
+   * @returns {boolean} True if mouse support is detected
    */
-  isScreenReaderActive() {
-    // Check common screen reader environment variables
-    return Boolean(
-      process.env.ACCESSIBILITY_ENABLED === '1' ||
-      process.env.GNOME_ACCESSIBILITY === '1' ||
-      process.env.GTK_MODULES?.includes('gail') ||
-      process.env.QT_ACCESSIBILITY === '1' ||
-      process.env.ACCESSIBILITY_ENABLED === 'true' ||
-      process.env.SCREEN_READER === '1' ||
-      process.env.SCREEN_READER === 'true' ||
-      process.env.NVDA ||
-      process.env.ORCA ||
-      process.env.YASR ||
-      process.env.SPEECHD ||
-      process.env.ESPEAK ||
-      process.env.SPD_GTK
+  static detectMouseSupport() {
+    // Check common environment variables that indicate mouse support
+    return (
+      process.env.TERM_PROGRAM === 'iTerm.app' ||
+      process.env.TERM_PROGRAM === 'vscode' ||
+      process.env.TERM_PROGRAM === 'Hyper' ||
+      (process.env.TERM && process.env.TERM.includes('xterm'))
     );
   }
   
   /**
-   * Check if terminal supports CJK (Chinese, Japanese, Korean) characters
-   * @returns {boolean} True if CJK is supported
+   * Detect clipboard support in the terminal
+   * @returns {boolean} True if clipboard operations are supported
    */
-  supportsCJK() {
-    // Check for CJK locales or LANG settings
-    return /^[a-z]{2,3}_[A-Z]{2}\.?.*UTF-?8$/i.test(process.env.LANG || '') ||
-           /^[a-z]{2,3}_[A-Z]{2}\.?/i.test(process.env.LANG || '') && 
-           ['zh', 'ja', 'ko', 'jp', 'cn', 'tw', 'hk'].some(lang => 
-             (process.env.LANG || '').toLowerCase().startsWith(lang)
-           );
-  }
-  
-  /**
-   * Check if terminal supports Sixel graphics
-   * @returns {boolean} True if Sixel is supported
-   */
-  supportsSixel() {
-    // Check for terminals that support Sixel
-    return this.isWezTerm() || 
-           this.isKitty() || 
-           /xterm|mlterm|mintty|foot|contour|wezterm|warp|tabby|wez|terminus|terminator|tilix/i.test(process.env.TERM || '') ||
-           process.env.SIXEL_SUPPORT === '1';
-  }
-  
-  async initialize() {
-    console.log(chalk.blue('🖥️  Initializing Advanced Terminal Detector...'));
+  static detectClipboardSupport() {
+    // Check for common terminals with clipboard support
+    return (
+      process.env.TERM_PROGRAM === 'iTerm.app' ||
+      process.env.TERM_PROGRAM === 'vscode' ||
+      process.env.TERM_PROGRAM === 'Hyper' ||
+      process.platform === 'darwin' || // macOS terminals typically support clipboard
+      process.platform === 'win32' ||  // Windows terminals typically support clipboard
+    if (capabilities.mouse) score += 10;
+    if (capabilities.clipboard) score += 10;
+    if (capabilities.unicode) score += 5;
     
-    try {
-      // Initial detection
-      await this.performInitialDetection();
-      
-      // Set up monitoring if enabled
-      if (this.options.enableRealtimeDetection) {
-        this.startRealtimeMonitoring();
-      }
-      
-      console.log(chalk.green('✅ Advanced Terminal Detector initialized'));
-      this.emit('detector-ready', this.currentDimensions);
-      
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-      console.error(chalk.red('❌ Terminal detector initialization failed:'), error.message);
-      throw error;
+  }
+}
+
+/**
+ * Detect terminal capabilities
+ * @returns {Object} Terminal capabilities
+ */
+static detectCapabilities() {
+  return {
+    colors: this.detectColorSupport(),
+    unicode: this.detectUnicodeSupport(),
+    mouse: this.detectMouseSupport(),
+    clipboard: this.detectClipboardSupport(),
+    notifications: this.detectNotificationSupport(),
+    font: this.detectFontSupport(),
+    performance: this.detectPerformanceCapabilities(),
+    environment: this.detectEnvironment()
+  };
+}
+
+/**
+ * Detect terminal dimensions
+ * @returns {{width: number, height: number}} Terminal dimensions
+ */
+static detectDimensions() {
+  try {
+    // Try to get terminal size from process.stdout
+    if (process.stdout.isTTY) {
+      return {
+        width: process.stdout.columns || 80,
+        height: process.stdout.rows || 24
+      };
     }
+    // Fallback to environment variables
+    return {
+      width: parseInt(process.env.COLUMNS, 10) || 80,
+      height: parseInt(process.env.LINES, 10) || 24
+    };
+  } catch (error) {
+    // Default fallback
+    return { width: 80, height: 24 };
   }
-  
-  async performInitialDetection() {
-    const startTime = Date.now();
-    
-    // Detect current dimensions
-    this.currentDimensions = this.detectDimensions();
-    
-    // Detect terminal capabilities
-    if (this.options.enableCapabilityDetection) {
-      try {
-        this.terminalCapabilities = await this.detectCapabilities();
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          this.logError('Error detecting terminal capabilities', error);
-        } else {
-          this.logError('Unknown error occurred while detecting terminal capabilities', String(error));
-        }
-        return false;
-      }
+}
+
+/**
+ * Detect terminal color support
+ * @returns {boolean|number} Color support level
+ */
+static detectColorSupport() {
+  // Check for color support
+  if (process.stdout.isTTY) {
+    if ('CI' in process.env) {
+      return 8; // Basic color support in CI
     }
-    
-    // Record detection
-    const detectionTime = Date.now() - startTime;
-    this.recordDetection(detectionTime);
-    
-    console.log(chalk.cyan(`📐 Initial detection: ${this.currentDimensions.width}x${this.currentDimensions.height} (${this.currentDimensions.category})`));
+    if (process.env.TERM === 'xterm-256color' || process.env.TERM === 'screen-256color') {
+      return 256;
+    }
+    if (process.env.COLORTERM === 'truecolor' || process.env.COLORTERM === '24bit') {
+      return 16777216; // 16.7M colors (24-bit)
+    }
+    return 16; // Basic ANSI colors
   }
-  
-  // === DIMENSION DETECTION ===
-  
-  detectDimensions() {
-    const columns = process.stdout.columns || 80;
-    const rows = process.stdout.rows || 24;
-    
-    return {
-      width: columns,
-      height: rows,
-      aspectRatio: columns / rows,
-      totalCells: columns * rows,
-      category: this.categorizeDimensions(columns, rows),
-      breakpoint: this.getBreakpoint(columns, rows),
-      timestamp: Date.now(),
-      
-      // Advanced metrics
-      usableWidth: Math.max(columns - 4, 40), // Account for margins
-      usableHeight: Math.max(rows - 2, 10),   // Account for headers/footers
-      density: this.calculateDensity(columns, rows),
-      efficiency: this.calculateEfficiency(columns, rows)
-    };
+  return false; // No color support
+}
+
+/**
+ * Detect Unicode support
+ * @returns {boolean} Whether Unicode is supported
+ */
+static detectUnicodeSupport() {
+  // Check for Unicode support
+  if (process.platform === 'win32') {
+    // On Windows, check for UTF-8 code page
+    return process.env.TERM_PROGRAM === 'vscode' || 
+           process.env.WT_SESSION ||
+           process.env.TERM === 'xterm-256color';
   }
-  
-  categorizeDimensions(width, height) {
-    const totalCells = width * height;
-    
-    if (totalCells < 2000) return 'tiny';        // < 80x25
-    if (totalCells < 5000) return 'small';       // < 100x50
-    if (totalCells < 10000) return 'medium';     // < 125x80
-    if (totalCells < 20000) return 'large';      // < 160x125
-    if (totalCells < 40000) return 'xlarge';     // < 200x200
-    return 'massive';                             // >= 200x200
-  }
-  
-  getBreakpoint(width, height) {
-    if (width < 60 || height < 20) return 'xs';
-    if (width < 80 || height < 24) return 'sm';
-    if (width < 120 || height < 30) return 'md';
-    if (width < 160 || height < 40) return 'lg';
-    if (width < 200 || height < 50) return 'xl';
-    return 'xxl';
-  }
-  
-  calculateDensity(width, height) {
-    // Information density score (0-1)
-    const ratio = width / height;
-    const idealRatio = 3.5; // Roughly 16:9 equivalent for text
-    return Math.max(0, 1 - Math.abs(ratio - idealRatio) / idealRatio);
-  }
-  
-  calculateEfficiency(width, height) {
-    // UI efficiency score based on usable space
-    const usableRatio = (width - 4) * (height - 2) / (width * height);
-    return Math.max(0, Math.min(1, usableRatio));
-  }
-  
-  // === CAPABILITY DETECTION ===
-  
-  async detectCapabilities() {
-    const capabilities = {
-      colors: this.detectColorSupport(),
-      unicode: this.detectUnicodeSupport(),
-      mouse: this.detectMouseSupport(),
-      clipboard: this.detectClipboardSupport(),
-      notifications: this.detectNotificationSupport(),
-      fonts: this.detectFontSupport(),
-      performance: await this.detectPerformanceCapabilities(),
-      environment: this.detectEnvironment(),
-      timestamp: Date.now()
-    };
-    
-    // Calculate overall capability score
-    capabilities.score = this.calculateCapabilityScore(capabilities);
-    capabilities.tier = this.getCapabilityTier(capabilities.score);
-    
-    return capabilities;
-  }
-  
-  detectColorSupport() {
-    const colorDepth = process.stdout.getColorDepth ? process.stdout.getColorDepth() : 4;
-    
-    return {
-      depth: colorDepth,
-      trueColor: colorDepth >= 24,
-      supports256: colorDepth >= 8,
-      supports16: colorDepth >= 4,
-      monochrome: colorDepth <= 1,
-      score: Math.min(1, colorDepth / 24)
-    };
-  }
-  
-  detectUnicodeSupport() {
-    // Test basic Unicode support
-    const testChars = ['✓', '✗', '★', '◆', '▲', '●'];
-    let supportLevel = 0;
-    
-    try {
-      // Simple heuristic based on environment
-      if (process.env.LANG && process.env.LANG.includes('UTF-8')) {
-        supportLevel = 0.9;
-      } else if (process.env.TERM && process.env.TERM.includes('xterm')) {
-        supportLevel = 0.8;
-      } else {
-        supportLevel = 0.5;
+  // Assume Unicode support on Unix-like systems
+  return true;
+}
+
+/**
+ * Detect mouse support
+ * @returns {boolean} Whether mouse is supported
+ */
+static detectMouseSupport() {
+  // Check for mouse support
+  return process.stdout.isTTY && 
+         (process.env.TERM_PROGRAM === 'iTerm.app' ||
+          process.env.TERM_PROGRAM === 'vscode' ||
+          process.env.TERM_PROGRAM === 'Hyper' ||
+          process.env.TERM === 'xterm-256color');
+}
+
+/**
+ * Detect clipboard support
+ * @returns {boolean} Whether clipboard is supported
+ */
+static detectClipboardSupport() {
+  // Check for clipboard support
+  return process.platform === 'darwin' ||  // macOS
+         process.platform === 'win32' ||   // Windows
+         process.env.DISPLAY ||           // X11
+         process.env.WAYLAND_DISPLAY ||    // Wayland
+         false;
+}
+
+/**
+ * Detect notification support
+ * @returns {boolean} Whether notifications are supported
+ */
+static detectNotificationSupport() {
+  // Check for notification support
+  return process.platform === 'darwin' ||  // macOS
+         process.platform === 'win32' ||   // Windows
+         process.env.DISPLAY ||           // X11
+         process.env.WAYLAND_DISPLAY ||    // Wayland
+         false;
+}
+
+/**
+ * Detect font support
+ * @returns {Object} Font support information
+ */
+static detectFontSupport() {
+  // Basic font support detection
+  return {
+    emoji: process.platform !== 'win32',  // Emoji support
+    powerline: process.env.TERM_PROGRAM === 'iTerm.app' || 
+              process.env.TERM_PROGRAM === 'vscode',
+    ligatures: process.env.TERM_PROGRAM === 'iTerm.app' ||
+              process.env.TERM_PROGRAM === 'vscode'
+  };
+}
+
+/**
+ * Detect performance capabilities
+ * @returns {Object} Performance metrics
+ */
+static detectPerformanceCapabilities() {
+  return {
+    // Basic performance metrics
+    highResTime: typeof process.hrtime === 'function',
+    cpuUsage: typeof process.cpuUsage === 'function',
+    memoryUsage: typeof process.memoryUsage === 'function',
+    // Platform-specific optimizations
+    isFastTerminal: !process.env.CI && process.stdout.isTTY
+  };
+}
+
+/**
+ * Detect environment information
+ * @returns {Object} Environment details
+ */
+static detectEnvironment() {
+  return {
+    platform: process.platform,
+    arch: process.arch,
+    nodeVersion: process.version,
+    isCI: process.env.CI === 'true' || 
+          process.env.CI === '1' || 
+          process.env.CI === true ||
+          process.env.CONTINUOUS_INTEGRATION === 'true' ||
+          process.env.BUILD_NUMBER !== undefined ||
+          process.env.TRAVIS === 'true' ||
+          process.env.GITHUB_ACTIONS === 'true'
+  };
+}
+
+// === ADAPTIVE SCALING ===
+
+/**
+ * Detect all terminal capabilities
+ * @returns {Object} Complete terminal capabilities
+ */
+static detectCapabilities() {
+  const features = this.detectTerminalFeatures();
+  const mouseSupport = this.detectMouseSupport();
+  const clipboardSupport = this.detectClipboardSupport();
+  const notificationSupport = this.detectNotificationSupport();
+  const fontSupport = this.detectFontSupport();
+  const performanceCapabilities = this.detectPerformanceCapabilities();
+  const environment = this.detectEnvironment();
+
+  // Calculate dimensions
+  const dimensions = process.stdout.isTTY
+    ? { width: process.stdout.columns, height: process.stdout.rows }
+    : { width: 80, height: 24 }; // Default fallback
+
+  // Calculate scores
+  const layoutScore = this.getLayoutScore(dimensions, features);
+  const capabilityScore = this.calculateCapabilityScore({
+    ...features,
+    mouse: mouseSupport,
+    clipboard: clipboardSupport,
+    unicode: features.hasUnicode,
+    colors: features.colors || 0
+  });
+
+  const terminalType = this.getTerminalType(capabilityScore);
+  const capabilityTier = this.getCapabilityTier(capabilityScore);
+
+  return {
+    // Basic info
+    type: terminalType,
+    tier: capabilityTier,
+
+    // Capabilities
+    features: {
+      ...features,
+      mouse: mouseSupport,
+      clipboard: clipboardSupport,
+      notifications: notificationSupport,
+      ...fontSupport,
+      ...performanceCapabilities
+    },
+
+    // Environment
+    environment,
+
+    // Metrics
+    dimensions,
+    scores: {
+      layout: layoutScore,
+      capability: capabilityScore
+    },
+
+    // Timestamp
+    timestamp: new Date().toISOString()
+  };
+}
       }
     } catch (error: unknown) {
       if (error instanceof Error) {

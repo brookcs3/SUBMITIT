@@ -5,23 +5,41 @@ import chalk from 'chalk';
 import { globby } from 'globby';
 import { EnhancedYogaLayoutEngine } from '../lib/EnhancedYogaLayoutEngine.js';
 import { SmartFileHandlerSimple } from '../lib/SmartFileHandlerSimple.js';
-import { Logger } from '../lib/Logger.js';
+import { Logger } from '../utils/Logger.js';
 import SmartFileHandler from '../ninja/SmartFileHandler.js';
 import IncrementalYogaDiffing from '../ninja/IncrementalYogaDiffing.js';
 import PreviewManager from '../core/PreviewManager.js';
+import { ProjectManager } from '../lib/ProjectManager.js';
 
 // Get directory name for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Type imports - using module path as declared in types.d.ts
-/** @typedef {import('../types').FileInfo} FileInfo */
-/** @typedef {import('../types').ProjectConfig} ProjectConfig */
-/** @typedef {import('../types').ProcessingResult} ProcessingResult */
-/** @typedef {import('../types').LayoutResult} LayoutResult */
-/** @typedef {import('../types').AddOptions} AddOptions */
-/** @typedef {import('../types/smart-file-handler').ProcessFileOptions} ProcessFileOptions */
-/** @typedef {import('../types/smart-file-handler').ProcessFilesResult} ProcessFilesResult */
+// Type imports - using module paths from type definition files
+/** @typedef {import('../utils/Logger.js').LogLevel} LogLevel */
+/** @typedef {import('../utils/Logger.js').LoggerOptions} LoggerOptions */
+
+// SmartFileHandler type definitions
+/**
+ * @typedef {Object} ProcessFileOptions
+ * @property {boolean} [dryRun] - Whether to perform a dry run
+ * @property {boolean} [force] - Whether to force the operation
+ * @property {string} [role] - The role of the file
+ */
+
+/**
+ * @typedef {Object} ProcessFilesResult
+ * @property {boolean} success - Whether the operation was successful
+ * @property {string[]} [files] - Array of processed file paths
+ * @property {Error[]} [errors] - Array of errors encountered
+ */
+
+// Additional type definitions
+/** @typedef {{ path: string; role: string; content: string }} FileInfo */
+/** @typedef {{ rootDir: string; files: FileInfo[]; roles: Record<string, string[]>; }} ProjectConfig */
+/** @typedef {{ success: boolean; message: string; files?: string[]; errors?: Error[]; }} ProcessingResult */
+/** @typedef {{ width: number; height: number; layout: any; }} LayoutResult */
+/** @typedef {{ role?: string; dryRun?: boolean; force?: boolean; verbose?: boolean; }} AddOptions */
 
 /**
  * Adds content to the project with semantic role detection
@@ -327,22 +345,6 @@ function getFileType(extension) {
   };
   
   return types[extension] || 'file';
-}
-
-/**
- * @param {string} type
- * @returns {string}
- */
-function getDefaultRole(type) {
-  const roles = {
-    'image': 'gallery',
-    'document': 'document',
-    'text': 'about',
-    'audio': 'media',
-    'video': 'media'
-  };
-
-  return roles[type] || 'content';
 }
 
 /**
